@@ -20,7 +20,33 @@
 
 | Plugin Name | Status | Version | Last Updated |
 |-------------|--------|---------|--------------|
-| | | | |
+| TapeAge | 💡 Ideated | - | 2025-11-10 |
+
+### TapeAge
+
+**Status:** 💡 **Ideated**
+**Created:** 2025-11-10
+**Type:** Audio Effect
+
+**Description:**
+Vintage tape saturator with warm saturation and musical degradation (wow/flutter/dropout/noise). 60s/70s aesthetic with earth tone palette.
+
+**Parameters (3 total):**
+- DRIVE: 0-100%, default 50% (tape saturation)
+- AGE: 0-100%, default 25% (tape degradation - wow/flutter/dropout/noise)
+- MIX: 0-100%, default 100% (dry/wet blend)
+
+**DSP:** Warm harmonic saturation with controllable tape artifacts (wow, flutter, dropout, noise). Musical degradation even at maximum settings.
+
+**GUI:** Medium rectangle, vintage VU meter (output peak), 3 brass knobs horizontal, creamy beige textured background, burnt orange/brown accents, clean sans-serif all-caps typography.
+
+**Lifecycle Timeline:**
+- **2025-11-10:** Creative brief completed
+
+**Known Issues:**
+- None
+
+**Last Updated:** 2025-11-10
 
 ## Entry Template
 

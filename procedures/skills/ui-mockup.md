@@ -1,12 +1,14 @@
 # ui-mockup
 
-**Purpose:** Generate production-ready WebView UI mockups for JUCE plugins. The HTML you generate IS the plugin UI, not a throwaway prototype.
+**Purpose:** Generate production-ready WebView UI mockups for JUCE plugins in two phases: design iteration (2 files) then implementation scaffolding (5 additional files). The HTML you generate IS the plugin UI, not a throwaway prototype.
 
 ---
 
 ## What It Does
 
-Transforms creative vision into a complete, interactive HTML/CSS interface that becomes the actual plugin UI. Generates all files needed for Stage 5 (GUI) implementation.
+Transforms creative vision into a complete, interactive HTML/CSS interface that becomes the actual plugin UI. Works in two phases:
+1. **Design Phase:** Generate design files (YAML + test HTML) for rapid iteration
+2. **Implementation Phase:** Generate scaffolding (production HTML + C++ boilerplate + build config) after design is finalized
 
 ## When To Use
 
@@ -93,18 +95,62 @@ Creates self-contained HTML with JUCE integration:
 </script>
 ```
 
-### Phase 5: Generate C++ Boilerplate
+**IMPORTANT:** Phases 3-4 generate DESIGN artifacts (YAML + test HTML). Present decision menu BEFORE generating implementation files (Phases 5-7).
+
+### Phase 4.5: Present Design Decision Menu
+
+**Stop here and present decision menu:**
+
+```
+✓ Mockup v[N] design created (2 files)
+
+Files generated:
+- v[N]-ui.yaml (design specification)
+- v[N]-ui-test.html (browser-testable mockup)
+
+What do you think?
+1. Provide refinements (iterate on design) ← Creates v[N+1]
+2. Finalize and create implementation files (recommended if satisfied)
+3. Test in browser (open v[N]-ui-test.html)
+4. Other
+```
+
+**WAIT for user response before continuing to Phase 5.**
+
+- Option 1: User gives feedback → regenerate YAML + test HTML as new version
+- Option 2: User approves → proceed to Phases 5-7 (generate remaining 5 files + parameter-spec.md)
+- Option 3: Open test HTML in browser for interactive review
+- Option 4: Handle custom request
+
+**Only execute Phases 5-7 if user chose option 2 (finalize).**
+
+### Phase 5: Generate Production HTML (After Finalization Only)
+
+**Prerequisites:** User confirmed design in Phase 4.5 decision menu.
+
+Creates production HTML with JUCE integration (same visual as test HTML, but with real parameter bindings):
+- `v[N]-ui.html` - Production HTML (JUCE integrated)
+
+### Phase 6: Generate C++ Boilerplate
+
+**Prerequisites:** User confirmed design in Phase 4.5 decision menu.
 Creates WebView implementation files:
 - `v[N]-editor.h` - Header with relays and browser component
 - `v[N]-editor.cpp` - Resource provider and parameter attachments
 
-### Phase 6: Generate Build Configuration
+### Phase 7: Generate Build Configuration
+
+**Prerequisites:** User confirmed design in Phase 4.5 decision menu.
+
 Creates CMake snippets for:
 - WebView feature flags
 - ui/public/ directory zipping
 - Binary embedding
 
-### Phase 7: Generate Implementation Checklist
+### Phase 8: Generate Implementation Checklist
+
+**Prerequisites:** User confirmed design in Phase 4.5 decision menu.
+
 Creates step-by-step guide for Stage 5 implementation.
 
 ## What It Creates
@@ -171,17 +217,24 @@ Just customize parameter count and names.
 
 ## Iteration Process
 
-**First mockup (v1):**
+**First mockup (v1) - Design Phase:**
 1. Load creative brief
 2. Conduct UI vision conversation
-3. Generate all 7 files
-4. User tests in browser (`v1-ui-test.html`)
+3. Generate design files: `v1-ui.yaml` + `v1-ui-test.html`
+4. Present decision menu
+5. User tests in browser or requests refinements
 
-**Iteration (v2):**
+**Iteration (v2) - Still in Design Phase:**
 1. User requests changes: "Add third knob for tone control"
 2. System reads v1 as baseline
-3. Generates v2 with modifications
-4. v1 files preserved (lineage maintained)
+3. Generates v2 design files: `v2-ui.yaml` + `v2-ui-test.html`
+4. Present decision menu again
+5. Repeat until user chooses "finalize"
+
+**Finalization - Implementation Phase:**
+1. User chooses "finalize" from decision menu
+2. System generates remaining 5 files for latest version
+3. All implementation scaffolding ready for Stage 5
 
 **Stage 5 finds latest version automatically.**
 

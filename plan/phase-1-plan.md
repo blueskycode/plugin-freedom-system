@@ -721,14 +721,40 @@ Total: 9 command files in `.claude/commands/`
            range: [0.0, 1.0]
    ```
 
-7. Implement Phase 4: Generate Production HTML:
+7. Implement Phase 4: Generate Browser Test HTML:
+   - Self-contained HTML for browser testing (no JUCE)
+   - Mock parameter state with console logging
+   - Interactive testing without building
+   - Same visual as production will be
+
+8. **CRITICAL:** Implement Phase 4.5: Present Design Decision Menu and STOP:
+   ```
+   ✓ Mockup v[N] design created (2 files)
+
+   Files generated:
+   - v[N]-ui.yaml (design specification)
+   - v[N]-ui-test.html (browser-testable mockup)
+
+   What do you think?
+   1. Provide refinements (iterate on design) ← Creates v[N+1]
+   2. Finalize and create implementation files (recommended if satisfied)
+   3. Test in browser (open v[N]-ui-test.html)
+   4. Other
+   ```
+   - WAIT for user response
+   - Option 1: Iterate (back to Phase 3, new version)
+   - Option 2: Finalize (continue to Phase 5-8)
+   - Option 3: Open test HTML
+   - **Only proceed to Phase 5-8 if user chose option 2**
+
+9. Implement Phase 5: Generate Production HTML (After Finalization Only):
    - Self-contained HTML with JUCE integration
    - Import from `'./js/juce/index.js'`
    - Use `getSliderState(id)`, `getToggleState(id)`, `getComboBoxState(id)`
    - Parameter binding: `state.setNormalisedValue()` and `state.valueChangedEvent.addListener()`
    - Native feel: Disable text selection, right-click, use default cursor
 
-8. Implement Phase 5: Generate C++ Boilerplate:
+10. Implement Phase 6: Generate C++ Boilerplate (After Finalization Only):
    - `v[N]-editor.h` - Header with **CORRECT member order:**
      ```cpp
      // 1. RELAYS FIRST (no dependencies)
@@ -744,17 +770,20 @@ Total: 9 command files in `.claude/commands/`
      ```
    - `v[N]-editor.cpp` - Resource provider and parameter attachments
 
-9. Implement Phase 6: Generate Build Configuration:
-   - CMake snippets for WebView feature flags
-   - `juce_add_binary_data` for ui/ directory
-   - Platform-specific WebView setup
+11. Implement Phase 7: Generate Build Configuration (After Finalization Only):
+    - CMake snippets for WebView feature flags
+    - `juce_add_binary_data` for ui/ directory
+    - Platform-specific WebView setup
 
-10. Implement Phase 7: Generate Implementation Checklist:
+12. Implement Phase 8: Generate Implementation Checklist (After Finalization Only):
     - Step-by-step guide for Stage 5 implementation
     - File copy instructions
     - Build verification steps
 
-11. Generate 7 files per mockup version:
+13. File Generation Summary:
+    - **Design phase (Phases 3-4):** 2 files (YAML + test HTML)
+    - **Implementation phase (Phases 5-8, after finalization):** 5 additional files (production HTML + C++ boilerplate + build config + checklist)
+    - **Total per mockup version:** 7 files
     ```
     plugins/[PluginName]/.ideas/mockups/
     ├── v[N]-ui.yaml                      # Specification
@@ -766,13 +795,14 @@ Total: 9 command files in `.claude/commands/`
     └── v[N]-implementation-steps.md      # Implementation checklist
     ```
 
-12. Implement versioning:
+14. Implement versioning:
     - First mockup: v1
-    - Redesign request: v2 (reads v1 as baseline)
+    - Iteration request: v2 (reads v1 as baseline, generates only design files until finalized)
     - Further iterations: v3, v4, etc.
     - All versions preserved (idea lineage)
+    - Implementation files only generated for finalized version
 
-13. Implement parameter-spec.md generation:
+15. Implement parameter-spec.md generation:
     - After mockup finalized, extract all parameters
     - Generate `plugins/[Name]/.ideas/parameter-spec.md` with:
       - Parameter IDs (camelCase)
@@ -782,17 +812,10 @@ Total: 9 command files in `.claude/commands/`
       - DSP usage descriptions
     - Mark as CRITICAL CONTRACT (Stage 1 blocks if missing)
 
-14. Add decision menu after mockup creation:
-    ```
-    ✓ Mockup v[N] created
-
-    What's next?
-    1. Finalize and proceed to implementation (recommended)
-    2. Iterate on this design
-    3. Save as template ← Add to UI template library
-    4. Test in browser (open v[N]-ui-test.html)
-    5. Other
-    ```
+16. Iteration handling:
+    - If user chooses "Provide refinements" (option 1): Return to Phase 3 with new version number
+    - If user chooses "Finalize" (option 2): Execute Phases 5-8
+    - Design files can iterate rapidly without touching implementation scaffolding
 
 **Expected Output**: `.claude/skills/ui-mockup/SKILL.md` (complete skill file)
 

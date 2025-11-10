@@ -15,13 +15,13 @@ A specialized autonomous agent configured for comprehensive problem investigatio
 ## When It Runs
 
 **Auto-invoked by:**
+
 - `deep-research` skill when investigating complex problems
 - Build failure protocol (Option 1: Investigate)
 - Natural language detection ("research this", "investigate this")
 
-**Model:** Sonnet (not Opus)—balances thoroughness with speed
-
 **Tools available:**
+
 - Bash (for local file searches)
 - Read (for reading docs and code)
 - WebSearch (for web research)
@@ -37,6 +37,7 @@ The agent stops as soon as it finds a confident answer—doesn't over-research s
 **First check:** Is this immediately obvious?
 
 **Obvious problems (skip all research):**
+
 - Simple syntax errors (missing semicolon, bracket)
 - Misspelled variable/function names
 - Common beginner mistakes
@@ -45,6 +46,7 @@ The agent stops as soon as it finds a confident answer—doesn't over-research s
 **Action:** Answer directly with fix, no research needed
 
 **Example:**
+
 ```
 Error: missing semicolon on line 42
 → Skip research, fix obvious syntax error
@@ -55,6 +57,7 @@ Error: missing semicolon on line 42
 **Why:** Pre-validated solutions that already worked in this workspace
 
 **Process:**
+
 1. **Classify problem** (problem_type, component, severity)
 2. **Hierarchical search:**
    - Pass 1: Exact match (problem_type + component)
@@ -66,6 +69,7 @@ Error: missing semicolon on line 42
 **Stops here if:** High confidence match found in local docs
 
 **Example:**
+
 ```
 Problem: Rotary sliders overlapping in FlexBox
 → Search docs/troubleshooting/ for "flexbox" + "layout" + "slider"
@@ -79,6 +83,7 @@ Problem: Rotary sliders overlapping in FlexBox
 **Why:** Official JUCE documentation is authoritative
 
 **Process:**
+
 1. Query Context7 with JUCE library ID
 2. Search for relevant component (FlexBox, Slider, AudioProcessor, etc.)
 3. Look for API docs, migration guides, best practices
@@ -86,6 +91,7 @@ Problem: Rotary sliders overlapping in FlexBox
 **Stops here if:** Clear answer in official documentation
 
 **Example:**
+
 ```
 Problem: Unknown JUCE API method
 → Query Context7 for juce::dsp::Compressor
@@ -99,11 +105,13 @@ Problem: Unknown JUCE API method
 **Why:** Complex/unusual problems requiring multiple sources
 
 **Only reaches this level if:**
+
 - Not in local troubleshooting docs
 - Not clearly answered in official docs
 - Genuinely complex or unusual problem
 
 **Process:**
+
 1. Multiple search query variations
 2. Evaluate source credibility:
    - ✅ Official JUCE forum
@@ -115,6 +123,7 @@ Problem: Unknown JUCE API method
 4. Check version compatibility
 
 **Example:**
+
 ```
 Problem: Obscure build error, not in docs or Context7
 → Search JUCE forum, GitHub issues, Stack Overflow
@@ -140,6 +149,7 @@ Agent presents findings in structured markdown:
 ## Research Report: [Problem Description]
 
 ### Problem Identified
+
 - Error/Issue: [exact error]
 - Context: [JUCE version, component]
 - Root Cause: [technical explanation]
@@ -147,34 +157,41 @@ Agent presents findings in structured markdown:
 ### Research Findings
 
 #### Local Troubleshooting Docs
+
 - Classification: [problem_type, component, severity]
 - Search strategy: [passes used]
 - Results: [matched doc or none found]
 
 #### Context7 Documentation
+
 [API documentation found or not found]
 
 #### Web Research Sources
+
 1. [Source] - [credibility] - [key finding]
 2. [Source] - [credibility] - [key finding]
 
 ### Confidence Assessment
+
 - Confidence Level: HIGH/MEDIUM/LOW
 - Reasoning: [why confident or not]
 
 ### Recommended Solution
 
 [HIGH confidence]:
+
 - Proposed Fix: [exact code]
 - Why This Works: [technical reasoning]
 - Implementation Steps: [1, 2, 3]
 
 [MEDIUM confidence]:
+
 - Possible Solution: [likely approach]
 - Uncertainties: [what's unclear]
 - Suggested Validation: [how to test]
 
 [LOW confidence]:
+
 - Unable to Find Definitive Answer
 - What I searched: [terms used]
 - What's unclear: [specific unknowns]
@@ -184,45 +201,53 @@ Agent presents findings in structured markdown:
 ## Research Rules
 
 **STOP as soon as confident answer found:**
+
 - Don't research obvious problems (Level 0)
 - Don't continue past Level 1 if local docs have answer
 - Don't continue past Level 2 if official docs are clear
 - Only reach Level 3 for complex/unusual problems
 
 **Always explain WHY:**
+
 - Not just what to change
 - Technical reasoning behind solution
 - How it addresses root cause
 
 **Never propose uncertain solutions as confident:**
+
 - Be honest about confidence level
 - Acknowledge limitations
 - Note conflicting information
 
 **Version numbers matter:**
+
 - Always check solution applies to our JUCE version
 - Note version compatibility in report
 
 ## Why This Works
 
 **Graduated depth prevents over-research:**
+
 - Simple problems solved in seconds (Level 0)
 - Common problems solved in minutes (Level 1)
 - Most problems solved in 3-5 minutes (Level 2)
 - Only complex problems reach Level 3
 
 **Local docs are fastest:**
+
 - Pre-validated solutions
 - Already worked in this workspace
 - Same JUCE version
 - Searchable by symptoms/tags
 
 **Official docs are authoritative:**
+
 - Context7 provides up-to-date JUCE documentation
 - API changes, migration guides, best practices
 - Stops most problems here
 
 **Web research is comprehensive:**
+
 - Multiple credible sources
 - Cross-referencing for consensus
 - Version verification
@@ -231,6 +256,7 @@ Agent presents findings in structured markdown:
 ## Example Scenarios
 
 **Level 0 (obvious):**
+
 ```
 Error: expected ';' before '}' token
 → Missing semicolon
@@ -239,6 +265,7 @@ Error: expected ';' before '}' token
 ```
 
 **Level 1 (local docs):**
+
 ```
 Error: FlexBox layout broken, sliders overlap
 → Search local troubleshooting docs
@@ -248,6 +275,7 @@ Error: FlexBox layout broken, sliders overlap
 ```
 
 **Level 2 (Context7):**
+
 ```
 Error: How to use juce::dsp::Compressor?
 → Query Context7 for juce::dsp::Compressor
@@ -257,6 +285,7 @@ Error: How to use juce::dsp::Compressor?
 ```
 
 **Level 3 (web research):**
+
 ```
 Error: Obscure linker error on M1 Mac
 → Not in local docs
@@ -284,11 +313,13 @@ tools:
 ```
 
 **Model choice (Sonnet):**
+
 - Balances thoroughness with cost/speed
 - Sufficient for research tasks
 - Faster than Opus for web searches
 
 **Tool restrictions:**
+
 - No Write/Edit (research only, no code changes)
 - No Task (focused agent, doesn't spawn sub-agents)
 - Has web access for deep research
@@ -296,15 +327,18 @@ tools:
 ## Integration
 
 **Invoked by:**
+
 - `deep-research` skill (primary)
 - Build failure protocol investigations
 - Natural language triggers
 
 **Feeds into:**
+
 - `troubleshooting-docs` skill (solutions get documented)
 - User decision-making (presents findings, waits for approval)
 
 **Does NOT:**
+
 - Make code changes (research only)
 - Commit changes
 - Build or test
@@ -313,6 +347,7 @@ tools:
 ## Output Quality
 
 After investigation:
+
 - ✅ Root cause identified
 - ✅ Solution quality assessed
 - ✅ Confidence level stated
@@ -324,18 +359,21 @@ After investigation:
 ## Comparison: Agent vs Skill
 
 **Agent (troubleshooter.md):**
+
 - Configuration file
 - Defines model, tools, behavior
 - Autonomous execution
 - Invoked by skills
 
 **Skill (deep-research):**
+
 - Orchestration layer
 - Decides when to invoke agent
 - Handles user interaction
 - Manages workflow
 
 **Analogy:**
+
 - Skill = Manager (decides what research to do)
 - Agent = Researcher (executes research protocol)
 
@@ -349,21 +387,25 @@ After investigation:
 ## Tips
 
 **Trust the graduated protocol:**
+
 - Don't manually force deeper research
 - Let agent stop when confident
 - Most problems solved at Level 1-2
 
 **Local docs are your friend:**
+
 - Populate with solved problems
 - Faster than web research
 - Pre-validated for your workspace
 
 **Confidence levels matter:**
+
 - HIGH = implement confidently
 - MEDIUM = validate before implementing
 - LOW = investigate alternatives
 
 **Version compatibility is critical:**
+
 - JUCE API changes between versions
 - Agent always checks version relevance
 - Note version mismatches in report

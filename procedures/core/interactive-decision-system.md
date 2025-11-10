@@ -107,18 +107,19 @@ What's next?
 5. Other
 ```
 
-**After Mockup Creation:**
+**After Mockup Design (before implementation files):**
 ```
-✓ Mockup v2 created
+✓ Mockup v2 design created (2 files)
 
-What's next?
-1. Iterate on this design
-2. Finalize and proceed to implementation
-3. Save as template ← Add to UI template library
-4. Start fresh (new v3)
-5. Test in browser (open v2-ui-test.html)
-6. Other
+What do you think?
+1. Provide refinements (iterate on design)
+2. Finalize and create implementation files (recommended)
+3. Test in browser (open v2-ui-test.html)
+4. Save as template ← Add to UI template library
+5. Other
 ```
+
+**Rationale:** HTML mockups are cheap to iterate. C++ boilerplate is pointless if design isn't locked. Decision menu after design phase enables fast iteration without wasting time on scaffolding.
 
 ### Build Failure → Investigation Options
 
@@ -313,8 +314,8 @@ If there are 11 plugins, show all 11. Don't paginate or restrict to 4.
 
 **ui-mockup:**
 - Before starting mockup (how to start)
-- After mockup creation (what's next)
-- After iteration (finalize or continue)
+- After design phase (iterate or finalize) ← STOP POINT before generating C++ boilerplate
+- After finalization (proceed to implementation or save as template)
 
 **build-automation:**
 - On build failures (4 investigation options)

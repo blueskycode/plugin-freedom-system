@@ -16,16 +16,16 @@ This roadmap implements the PLUGIN FREEDOM SYSTEM through 7 phases organized aro
 
 ## Phase Summary
 
-| Phase | Name | Core Deliverables | Why This Order |
-|-------|------|-------------------|----------------|
-| 0 | Foundation & Contracts | Directory structure, CLAUDE.md, contract templates | Everything else references these |
-| 1 | Discovery System | All commands + core skills + interactive menus | Users can explore from session 1 |
-| 2 | Workflow Engine | plugin-workflow Stages 0,1,6 + state management | Core development workflow operational |
-| 3 | Implementation Subagents | foundation/shell/dsp/gui agents + dispatch | Actual code generation capability |
-| 4 | Build & Troubleshooting | build-and-install.sh + troubleshooter | Compile and debug what's built |
-| 5 | Validation System | Hooks + validator subagent + Python scripts | Quality assurance and drift prevention |
-| 6 | WebView UI System | Complete ui-mockup + WebView patterns | Beautiful plugin interfaces |
-| 7 | Polish & Enhancement | Lifecycle management + advanced features | Professional finish |
+| Phase | Name                     | Core Deliverables                                  | Why This Order                         |
+| ----- | ------------------------ | -------------------------------------------------- | -------------------------------------- |
+| 0     | Foundation & Contracts   | Directory structure, CLAUDE.md, contract templates | Everything else references these       |
+| 1     | Discovery System         | All commands + core skills + interactive menus     | Users can explore from session 1       |
+| 2     | Workflow Engine          | plugin-workflow Stages 0,1,6 + state management    | Core development workflow operational  |
+| 3     | Implementation Subagents | foundation/shell/dsp/gui agents + dispatch         | Actual code generation capability      |
+| 4     | Build & Troubleshooting  | build-and-install.sh + troubleshooter              | Compile and debug what's built         |
+| 5     | Validation System        | Hooks + validator subagent + Python scripts        | Quality assurance and drift prevention |
+| 6     | WebView UI System        | Complete ui-mockup + WebView patterns              | Beautiful plugin interfaces            |
+| 7     | Polish & Enhancement     | Lifecycle management + advanced features           | Professional finish                    |
 
 ---
 
@@ -34,6 +34,7 @@ This roadmap implements the PLUGIN FREEDOM SYSTEM through 7 phases organized aro
 **Objective:** Establish directory structure and contract system that all other phases reference.
 
 **Prerequisites:**
+
 - JUCE 8 installed
 - CMake, Ninja available
 - pluginval installed
@@ -42,6 +43,7 @@ This roadmap implements the PLUGIN FREEDOM SYSTEM through 7 phases organized aro
 **Core Deliverables:**
 
 1. **Directory Structure:**
+
 ```
 plugin-freedom-system/
 ├── .claude/
@@ -60,25 +62,29 @@ plugin-freedom-system/
 ```
 
 2. **CLAUDE.md Navigation Index:**
+
 - System topology (WHERE components live)
 - Key principles (contracts immutable, dispatcher pattern)
 - Component locations (skills, agents, commands)
 - NOT an orchestrator - just navigation
 
 3. **Contract Templates:**
+
 - `templates/creative-brief.md` - High-level plugin vision
 - `templates/parameter-spec.md` - Audio parameters specification
 - `templates/architecture.md` - DSP component design
 - `templates/plan.md` - Stage breakdown template
 
 4. **PLUGINS.md Registry:**
+
 ```markdown
 # Plugin Registry
 
 | Plugin | Status | Version | Last Updated |
-|--------|--------|---------|--------------|
+| ------ | ------ | ------- | ------------ |
 
 ## Status Legend
+
 - 💡 Ideated (creative brief exists)
 - 🚧 Stage N (in development)
 - ✅ Working (validated, not installed)
@@ -86,11 +92,13 @@ plugin-freedom-system/
 ```
 
 **Architecture References:**
+
 - `architecture/02-core-abstractions.md` (lines 5-47) - CLAUDE.md specification
 - `architecture/09-file-system-design.md` - Directory structure
 - `architecture/06-state-architecture.md` - PLUGINS.md state machine
 
 **Verification:**
+
 - [ ] All directories exist
 - [ ] CLAUDE.md exists with navigation (~200 words)
 - [ ] All 4 contract templates exist in `templates/`
@@ -104,6 +112,7 @@ plugin-freedom-system/
 **Objective:** Implement complete navigation and discovery layer so users can explore from session 1.
 
 **Prerequisites:**
+
 - Phase 0 complete
 
 **Core Deliverables:**
@@ -123,6 +132,7 @@ Create all 9 command files in `.claude/commands/`:
 - `doc-fix.md` - Documentation maintenance
 
 Each command contains:
+
 - Clear invocation instructions (instructed routing, not automatic)
 - Precondition checks (state validation)
 - User-facing description
@@ -132,37 +142,44 @@ Each command contains:
 Create skill structure in `.claude/skills/` with frontmatter and basic logic:
 
 **plugin-ideation:** Generates creative-brief.md
+
 - Adaptive brainstorming workflow
 - Interactive decision menus for exploration
 - Outputs to `plugins/[Name]/.ideas/creative-brief.md`
 
 **plugin-workflow:** 7-stage orchestration (stub Stages 2-5 for now)
+
 - Stage dispatch logic
 - State machine updates
 - Git commit integration
 - Decision menus at each stage boundary
 
 **plugin-improve:** Version management
+
 - Backup creation before changes
 - CHANGELOG.md updates (Keep a Changelog format)
 - State machine protection (blocks if 🚧)
 
 **context-resume:** Parse and resume from `.continue-here.md`
+
 - YAML frontmatter parsing
 - State reconstruction
 - Resumption options menu
 
 **ui-mockup:** Two-phase UI design
+
 - Phase 1: yaml → test.html mockup
 - Phase 2: test.html → finalized files
 - Design iteration menus
 
 **plugin-testing:** Validation suite
+
 - Build verification
 - pluginval integration
 - DAW loading tests
 
 **plugin-lifecycle:** Installation management
+
 - System folder operations
 - Installation verification
 - Uninstallation support
@@ -170,6 +187,7 @@ Create skill structure in `.claude/skills/` with frontmatter and basic logic:
 ### 1c. Interactive Decision System
 
 Build decision menus INTO all skills:
+
 - Inline numbered lists (NOT AskUserQuestion)
 - Context-aware option generation
 - Recommendation markers (`(recommended)`)
@@ -179,12 +197,14 @@ Build decision menus INTO all skills:
 ### 1d. Handoff File System
 
 Implement `.continue-here.md` creation:
+
 - YAML frontmatter (stage, plugin, status)
 - Prose context (what happened, what's next)
 - Created after Stage 0
 - Updated after each stage
 
 **Architecture References:**
+
 - `architecture/05-routing-architecture.md` - Instructed routing pattern
 - `procedures/core/interactive-decision-system.md` - Decision menu patterns
 - `procedures/skills/plugin-ideation.md` - Creative workflow
@@ -192,11 +212,13 @@ Implement `.continue-here.md` creation:
 - `architecture/06-state-architecture.md` (lines 62-154) - Handoff format
 
 **Critical Patterns:**
+
 - Commands contain instructions, Claude invokes skills (no automatic routing)
 - Interactive menus built into skill logic, not bolted on
 - context-resume available from start (checkpoint philosophy)
 
 **Verification:**
+
 - [ ] Type "/" shows all 9 commands
 - [ ] Each command file has clear invocation text
 - [ ] All 7 skill files exist with frontmatter
@@ -212,6 +234,7 @@ Implement `.continue-here.md` creation:
 **Objective:** Implement core plugin-workflow for Stages 0, 1, 6 (main context stages) with full state management.
 
 **Prerequisites:**
+
 - Phase 0-1 complete
 
 **Core Deliverables:**
@@ -249,22 +272,26 @@ Implement `.continue-here.md` creation:
 ### Stages 2-5 Stubs
 
 Placeholder dispatch logic:
+
 - Stage 2: Foundation (TODO: dispatch foundation-agent)
 - Stage 3: Shell (TODO: dispatch shell-agent)
 - Stage 4: DSP (TODO: dispatch dsp-agent)
 - Stage 5: GUI (TODO: dispatch gui-agent)
 
 **Architecture References:**
+
 - `procedures/skills/plugin-workflow.md` - Complete workflow spec
 - `architecture/02-core-abstractions.md` (lines 111-183) - Contract enforcement
 - `architecture/06-state-architecture.md` - State machine rules
 
 **Critical Patterns:**
+
 - **Complexity scoring prevents over-ambition**
 - **Contract enforcement is non-negotiable** (blocks Stage 1)
 - **State machine prevents concurrent modification**
 
 **Verification:**
+
 - [ ] `/implement TestPlugin` creates plugin directory
 - [ ] Stage 0 generates research.md with Context7 lookup
 - [ ] Stage 1 BLOCKS if contracts missing
@@ -283,6 +310,7 @@ Placeholder dispatch logic:
 **Objective:** Create the 4 implementation subagents and integrate dispatcher pattern into plugin-workflow.
 
 **Prerequisites:**
+
 - Phase 0-2 complete
 
 **Core Deliverables:**
@@ -296,6 +324,7 @@ Located: `.claude/agents/foundation-agent.md`
 - Creates empty PluginEditor.{h,cpp}
 - Verifies compilation with `--no-install` flag
 - Returns JSON report:
+
 ```json
 {
   "agent": "foundation-agent",
@@ -343,6 +372,7 @@ Located: `.claude/agents/gui-agent.md`
 ### Dispatcher Integration
 
 Update plugin-workflow Stages 2-5:
+
 - Dispatch subagent via Task tool with complete specs
 - Pass all contracts (parameter-spec, architecture, plan)
 - Parse JSON reports
@@ -350,18 +380,21 @@ Update plugin-workflow Stages 2-5:
 - Each subagent runs in fresh context (no accumulation)
 
 **Architecture References:**
+
 - `architecture/02-core-abstractions.md` (lines 74-109) - Subagent abstraction
 - `architecture/07-communication-architecture.md` (lines 82-101) - Report parsing
 - `procedures/skills/juce-foundation.md` - JUCE 8 patterns
 - `architecture/03-model-selection-extended-thinking-strategy.md` - dsp-agent uses Opus
 
 **Critical Patterns:**
+
 - **Fresh context per subagent** (dispatcher pattern core)
 - **Complete specs passed** (parameter-spec + architecture + plan)
 - **Self-validation before return** (subagent checks own work)
 - **JSON reports always returned** (even on failure)
 
 **Verification:**
+
 - [ ] All 4 subagent files exist in `.claude/agents/`
 - [ ] Each has frontmatter (model, tools, preconditions)
 - [ ] plugin-workflow dispatches via Task tool
@@ -378,6 +411,7 @@ Update plugin-workflow Stages 2-5:
 **Objective:** Centralized build automation and diagnostic capabilities.
 
 **Prerequisites:**
+
 - Phase 0-3 complete
 
 **Core Deliverables:**
@@ -387,6 +421,7 @@ Update plugin-workflow Stages 2-5:
 Located: `scripts/build-and-install.sh`
 
 7-phase pipeline:
+
 1. Pre-flight validation (directory, CMakeLists.txt, PRODUCT_NAME)
 2. Build (parallel VST3 + AU with Ninja: `-G Ninja --parallel`)
 3. Extract PRODUCT_NAME (handles spaces)
@@ -396,10 +431,12 @@ Located: `scripts/build-and-install.sh`
 7. Verification (file existence, sizes, timestamps <60s)
 
 Flags:
+
 - `--dry-run` - Show commands without executing
 - `--no-install` - Build only, don't install
 
 Logging:
+
 - `logs/[Plugin]/build_TIMESTAMP.log`
 - Color-coded output (success, warning, error)
 - Exit on error (`set -e`)
@@ -422,12 +459,14 @@ Located: `.claude/skills/build-automation/SKILL.md`
 Located: `.claude/agents/troubleshooter.md`
 
 Multi-level investigation:
+
 - **Level 1:** Basic error analysis
 - **Level 2:** Context7 JUCE docs lookup
 - **Level 3:** Forum/GitHub issue search
 - **Level 4:** Deep research with extended thinking
 
 Outputs structured diagnostic reports:
+
 - Symptoms observed
 - Root cause analysis
 - Proposed solutions
@@ -440,18 +479,21 @@ Outputs structured diagnostic reports:
 - Build failure → decision menu → Investigate option → troubleshooter
 
 **Architecture References:**
+
 - `architecture/11-build-automation-architecture.md` - Complete script spec
 - `procedures/scripts/build-and-install.md` - Implementation details
 - `procedures/skills/build-automation.md` - Failure protocol
 - `procedures/agents/troubleshooter.md` - Investigation protocol
 
 **Critical Patterns:**
+
 - **Ninja for speed** (`-G Ninja`)
 - **Parallel targets** (VST3 + AU simultaneously)
 - **Cache clearing** (critical for DAW detection)
 - **Timestamp verification** (<60 seconds = fresh build)
 
 **Verification:**
+
 - [ ] build-and-install.sh executable
 - [ ] Builds VST3 + AU in parallel
 - [ ] Clears DAW caches
@@ -470,6 +512,7 @@ Outputs structured diagnostic reports:
 **Objective:** Implement hybrid validation (deterministic hooks + semantic validator subagent).
 
 **Prerequisites:**
+
 - Phase 0-4 complete
 
 **Core Deliverables:**
@@ -483,6 +526,7 @@ Located: `.claude/hooks/validators/`
 - `validate-gui-bindings.py` - Stage 5: parameters ↔ attachments
 
 Each script:
+
 - Takes plugin directory as argument
 - Parses contracts and implementation
 - Returns exit code 0 (pass) or 1 (fail)
@@ -493,31 +537,38 @@ Each script:
 Located: `.claude/hooks/`
 
 **PostToolUse Hook:**
+
 - Code quality validation (real-time safety, allocations)
 - Pattern matching for JUCE best practices
 - Fast (<2s), blocking on failure
 
 **UserPromptSubmit Hook:**
+
 - Auto-inject context (handoff files, PLUGINS.md)
 - Load relevant contracts
 
 **Stop Hook:**
+
 - Stage enforcement (prevents skipping)
 - Verifies workflow integrity
 
 **SubagentStop Hook:**
+
 - Contract validation after each subagent
 - Calls validation scripts
 - BLOCKS if drift detected
 
 **PreCompact Hook:**
+
 - Preserves contracts before context compaction
 
 **SessionStart Hook:**
+
 - Environment validation
 - Setup verification
 
 **Hook Pattern (ALL hooks must follow):**
+
 ```bash
 #!/bin/bash
 
@@ -551,17 +602,20 @@ Located: `.claude/agents/validator.md`
 - Decision menu presents findings: Accept / Make changes / Other
 
 **Architecture References:**
+
 - `architecture/02-core-abstractions.md` (lines 185-252) - Hybrid validation
 - `architecture/10-extension-architecture.md` (lines 96-165) - Hook system
 - `architecture/13-error-handling-recovery.md` (lines 182-461) - Hook patterns
 
 **Critical Patterns:**
+
 - **Layer 1 (Hooks):** Fast (2s), deterministic, blocking
 - **Layer 2 (validator):** Slow (60s), semantic, advisory
 - **Conditional execution:** ALL hooks check relevance first
 - **Graceful skip:** `exit 0` when not applicable, NEVER `exit 1`
 
 **Verification:**
+
 - [ ] All 6 hooks exist in `.claude/hooks/`
 - [ ] Hooks are executable (`chmod +x`)
 - [ ] Each hook checks relevance before executing
@@ -581,6 +635,7 @@ Located: `.claude/agents/validator.md`
 **Objective:** Complete WebView integration with two-phase design workflow and critical safety patterns.
 
 **Prerequisites:**
+
 - Phase 0-5 complete
 
 **Core Deliverables:**
@@ -590,11 +645,13 @@ Located: `.claude/agents/validator.md`
 Located: `.claude/skills/ui-mockup/SKILL.md`
 
 **Phase 1: Mockup Creation**
+
 - yaml design definition → `test.html` mockup
 - Browser testing support
 - Iteration loop with decision menus
 
 **Phase 2: Finalization**
+
 - `test.html` → 7 finalized files:
   - `ui/index.html`
   - `ui/ui.css`
@@ -614,6 +671,7 @@ Located: `templates/`
 - Parameter attachment patterns
 
 **CRITICAL: Member Declaration Order**
+
 ```cpp
 // ✅ CORRECT ORDER (destroyed in reverse)
 private:
@@ -642,6 +700,7 @@ Located: `.claude/ui-templates/`
 ### gui-agent WebView Integration
 
 Update gui-agent to:
+
 - Use finalized WebView files if exist
 - Implement relay pattern correctly
 - **ENFORCE member declaration order**
@@ -652,11 +711,13 @@ Update gui-agent to:
 ### CMake Integration
 
 Update foundation-agent CMakeLists.txt generation:
+
 - `juce_add_binary_data` for ui/ directory
 - Platform-specific WebView configuration
 - WebView2 setup for Windows (future)
 
 **Architecture References:**
+
 - `architecture/12-webview-integration-design.md` - Complete architecture
 - `procedures/webview/README.md` - ⚠️ START HERE
 - `procedures/webview/best-practices.md` - ⚠️ CRITICAL: Member order
@@ -665,6 +726,7 @@ Update foundation-agent CMakeLists.txt generation:
 - `procedures/webview/common-problems.md` - Troubleshooting
 
 **Critical Patterns:**
+
 - **Member order:** Relays → WebView → Attachments (prevents 90% of crashes)
 - **Resource provider:** JUCE 8 requirement (replaces JUCE 7 data URLs)
 - **CSS constraints:** `100%` not `100vh` (initial render issue)
@@ -672,6 +734,7 @@ Update foundation-agent CMakeLists.txt generation:
 - **Relay types:** WebSliderRelay, WebToggleButtonRelay, WebComboBoxRelay
 
 **Verification:**
+
 - [ ] ui-mockup skill has complete two-phase workflow
 - [ ] Template yaml files exist in `.claude/ui-templates/`
 - [ ] ui-design-rules.md documents all constraints
@@ -692,6 +755,7 @@ Update foundation-agent CMakeLists.txt generation:
 **Objective:** Professional finish and advanced features for complete system.
 
 **Prerequisites:**
+
 - Phase 0-6 complete
 
 **Core Deliverables:**
@@ -735,12 +799,14 @@ Located: `.claude/skills/troubleshooting-docs/SKILL.md`
 ### plugin-improve Enhancements
 
 Add to existing skill:
+
 - Advanced version management
 - Regression testing suite
 - Changelog generation improvements
 - Backup verification
 
 **Architecture References:**
+
 - `procedures/skills/plugin-lifecycle.md`
 - `procedures/skills/design-sync.md`
 - `procedures/skills/deep-research.md`
@@ -748,6 +814,7 @@ Add to existing skill:
 - `procedures/skills/plugin-improve.md`
 
 **Verification:**
+
 - [ ] plugin-lifecycle handles complex installation scenarios
 - [ ] design-sync validates mockup ↔ brief alignment
 - [ ] deep-research performs parallel investigation
@@ -793,16 +860,16 @@ Polish (Phase 7) ← Professional finish
 
 ### Testing Progression
 
-| Phase | Test Plugin | What to Verify |
-|-------|-------------|----------------|
-| 0 | - | Directory structure exists |
-| 1 | - | All commands discoverable, menus work |
-| 2 | TestPlugin | Stages 0→1→6 complete |
-| 3 | SimpleGain | Full 7-stage workflow |
-| 4 | MediumDelay | Build failures handled, troubleshooting works |
-| 5 | DriftTest | Validation catches contract violations |
-| 6 | WebViewPlugin | Beautiful UI, parameters bind correctly |
-| 7 | VersionedPlugin | v1.0 → v1.1 with all enhancements |
+| Phase | Test Plugin     | What to Verify                                |
+| ----- | --------------- | --------------------------------------------- |
+| 0     | -               | Directory structure exists                    |
+| 1     | -               | All commands discoverable, menus work         |
+| 2     | TestPlugin      | Stages 0→1→6 complete                         |
+| 3     | SimpleGain      | Full 7-stage workflow                         |
+| 4     | MediumDelay     | Build failures handled, troubleshooting works |
+| 5     | DriftTest       | Validation catches contract violations        |
+| 6     | WebViewPlugin   | Beautiful UI, parameters bind correctly       |
+| 7     | VersionedPlugin | v1.0 → v1.1 with all enhancements             |
 
 ---
 
@@ -811,6 +878,7 @@ Polish (Phase 7) ← Professional finish
 ### WebView Member Order (Phase 6)
 
 ❌ **WRONG - Release build crashes:**
+
 ```cpp
 juce::WebBrowserComponent webView;
 juce::WebSliderRelay relay;
@@ -818,6 +886,7 @@ juce::WebSliderParameterAttachment attachment;
 ```
 
 ✅ **CORRECT - Destroyed in reverse:**
+
 ```cpp
 juce::WebSliderRelay relay;           // 1. Relays first
 juce::WebBrowserComponent webView;    // 2. WebView second
@@ -827,6 +896,7 @@ juce::WebSliderParameterAttachment attachment; // 3. Attachments last
 ### Contract Enforcement (Phase 2)
 
 Stage 1 Planning BLOCKS if:
+
 - `parameter-spec.md` missing
 - `architecture.md` missing
 
@@ -845,6 +915,7 @@ fi
 ### State Machine Protection (Phases 1-2)
 
 If `PLUGINS.md` shows status 🚧:
+
 - ONLY plugin-workflow can modify
 - plugin-improve MUST NOT touch
 
