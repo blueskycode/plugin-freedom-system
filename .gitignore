@@ -1,6 +1,3 @@
-# Session state (temporary workflow tracking)
-.continue-here.md
-
 # Build artifacts
 build/
 logs/
