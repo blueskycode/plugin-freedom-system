@@ -846,9 +846,9 @@ See: `architecture/02-core-abstractions.md` (Contract abstraction)
 **If PLUGINS.md shows status 🚧 (in development):**
 
 - ONLY plugin-workflow can modify the plugin
-- plugin-improve MUST NOT touch it (prevents concurrent modification)
+- plugin-improve MUST NOT touch it
 
-**Why critical:** Prevents corruption from multiple workflows modifying same plugin.
+**Why critical:** Prevents corruption from multiple workflows modifying the same plugin simultaneously.
 
 See: `architecture/06-state-architecture.md` (Lifecycle state machine)
 

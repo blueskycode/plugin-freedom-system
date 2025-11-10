@@ -11,8 +11,6 @@
 
 ## State Machine Rules
 
-**CRITICAL:** Only ONE plugin can be 🚧 at a time (prevents concurrent modification bugs)
-
 - If status is 🚧: ONLY plugin-workflow can modify (use `/continue` to resume)
 - plugin-improve blocks if status is 🚧 (must complete workflow first)
 

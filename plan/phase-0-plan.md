@@ -179,9 +179,8 @@ plugin-freedom-system/
 ## Key Principles
 1. **Contracts are immutable during implementation** - All stages reference the same specs (zero drift)
 2. **Dispatcher pattern** - Each subagent runs in fresh context (no accumulation)
-3. **State machine protection** - Only ONE plugin can be 🚧 at a time
-4. **Discovery through play** - Features found via slash command autocomplete and decision menus
-5. **Instructed routing** - Commands expand to prompts, Claude invokes skills
+3. **Discovery through play** - Features found via slash command autocomplete and decision menus
+4. **Instructed routing** - Commands expand to prompts, Claude invokes skills
 
 ## Workflow Entry Points
 - New plugin: `/dream` → `/implement`

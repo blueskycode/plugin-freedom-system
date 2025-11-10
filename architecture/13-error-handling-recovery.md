@@ -152,7 +152,6 @@ git commit -m "Stage N complete"
 **Prevention:**
 - Single-user workflow (v2.0)
 - Atomic commits per stage
-- No concurrent modifications
 
 #### 6. Hook Script Failures
 

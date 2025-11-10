@@ -2483,8 +2483,7 @@ Choose (1-6): _
 2. Find section: `### [pluginName]`
 3. Update `**Status:**` line with new emoji and text
 4. Validate transition is legal (see validateTransition below)
-5. Enforce single 🚧 constraint (only ONE plugin can be 🚧)
-6. Write back to PLUGINS.md
+5. Write back to PLUGINS.md
 
 **Example:**
 ```markdown
@@ -2568,28 +2567,6 @@ Choose (1-6): _
 2. Check transition against rules
 3. Return: `{ allowed: true }` or `{ allowed: false, reason: "..." }`
 
-### enforceSingleInProgress()
-
-**Purpose:** Ensure only ONE plugin is 🚧 at a time.
-
-**Implementation:**
-1. Read PLUGINS.md
-2. Search for all `**Status:** 🚧` entries
-3. Count occurrences
-4. If starting new 🚧 and another exists:
-   ```
-   ✗ Cannot start [PluginA] - [PluginB] is already in progress.
-
-   Only one plugin can be in development (🚧) at a time.
-
-   Options:
-   1. Complete [PluginB] first (recommended)
-   2. Pause [PluginB] (/continue will resume it later)
-   3. View [PluginB] status
-
-   Choose (1-3): _
-   ```
-5. Return: `{ allowed: true }` or `{ allowed: false, blockedBy: "PluginB" }`
 
 ## Interactive Decision Menu System
 

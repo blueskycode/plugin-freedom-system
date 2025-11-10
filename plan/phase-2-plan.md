@@ -217,7 +217,6 @@ This phase splits into 3 sub-phases based on architectural dependencies:
    - `getPluginStatus(pluginName)` - Returns current status for routing
    - `validateTransition(currentStatus, newStatus)` - Enforces legal transitions
 3. Implement state machine constraints:
-   - **Single 🚧 constraint:** Only ONE plugin can be 🚧 at a time (prevents concurrent modification)
    - **Sequential stage enforcement:** Cannot skip from 🚧 Stage 0 to 🚧 Stage 6
    - **Contract-based transitions:** Stage 1 transition requires parameter-spec.md and architecture.md (generated via ui-mockup two-phase workflow)
 4. Create PLUGINS.md entry structure (from state-architecture.md lines 42-83):

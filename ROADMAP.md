@@ -293,7 +293,6 @@ Placeholder dispatch logic:
 
 - **Complexity scoring prevents over-ambition**
 - **Contract enforcement is non-negotiable** (blocks Stage 1)
-- **State machine prevents concurrent modification**
 
 **Verification:**
 
