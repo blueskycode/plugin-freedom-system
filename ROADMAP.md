@@ -56,7 +56,6 @@ plugin-freedom-system/
 ├── logs/                  # Build logs
 ├── backups/               # Version backups
 ├── scripts/               # Automation scripts
-├── templates/             # Contract and code templates
 ├── PLUGINS.md             # Plugin registry with state machine
 └── .gitignore
 ```
@@ -70,10 +69,11 @@ plugin-freedom-system/
 
 3. **Contract Templates:**
 
-- `templates/creative-brief.md` - High-level plugin vision
-- `templates/parameter-spec.md` - Audio parameters specification
-- `templates/architecture.md` - DSP component design
-- `templates/plan.md` - Stage breakdown template
+Templates distributed to skill-specific `assets/` directories:
+- `.claude/skills/plugin-ideation/assets/creative-brief-template.md` - High-level plugin vision
+- `.claude/skills/ui-mockup/assets/parameter-spec-template.md` - Audio parameters specification
+- `.claude/skills/plugin-workflow/assets/architecture-template.md` - DSP component design
+- `.claude/skills/plugin-workflow/assets/plan-template.md` - Stage breakdown template
 
 4. **PLUGINS.md Registry:**
 
@@ -166,11 +166,12 @@ Create skill structure in `.claude/skills/` with frontmatter and basic logic:
 - State reconstruction
 - Resumption options menu
 
-**ui-mockup:** Two-phase UI design
+**ui-mockup:** Two-phase UI design workflow
 
-- Phase 1: yaml → test.html mockup
-- Phase 2: test.html → finalized files
-- Design iteration menus
+- Design phase (Phases 3-4): Generate YAML spec + browser test HTML (2 files)
+- Phase 4.5: Present decision menu and WAIT for user approval
+- Implementation phase (Phases 5-8, only after approval): Generate 5 additional files (production HTML + C++ boilerplate + build config + checklist)
+- Total per finalized version: 7 files
 
 **plugin-testing:** Validation suite
 
@@ -644,15 +645,16 @@ Located: `.claude/agents/validator.md`
 
 Located: `.claude/skills/ui-mockup/SKILL.md`
 
-**Phase 1: Mockup Creation**
+**Design Phase (Phases 3-4):**
 
-- yaml design definition → `test.html` mockup
+- YAML design definition → `test.html` mockup (2 files)
 - Browser testing support
 - Iteration loop with decision menus
+- Phase 4.5: STOP and present decision menu
 
-**Phase 2: Finalization**
+**Implementation Phase (Phases 5-8, only after user confirms finalization):**
 
-- `test.html` → 7 finalized files:
+- Generate 5 additional files:
   - `ui/index.html`
   - `ui/ui.css`
   - `ui/ui.js`

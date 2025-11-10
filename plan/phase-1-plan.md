@@ -12,10 +12,11 @@
 - ✅ `.claude/CLAUDE.md` - EXISTS
 - ✅ `PLUGINS.md` - EXISTS
 - ✅ `.gitignore` - EXISTS
-- ✅ `templates/creative-brief.md` - EXISTS
-- ✅ `templates/parameter-spec.md` - EXISTS
-- ✅ `templates/architecture.md` - EXISTS
-- ✅ `templates/plan.md` - EXISTS
+- ✅ Contract templates in skill assets/ - EXISTS
+  - `.claude/skills/plugin-ideation/assets/creative-brief-template.md`
+  - `.claude/skills/plugin-workflow/assets/plan-template.md`
+  - `.claude/skills/plugin-workflow/assets/architecture-template.md`
+  - `.claude/skills/ui-mockup/assets/parameter-spec-template.md`
 
 **Status:** Complete
 
@@ -783,7 +784,8 @@ Total: 9 command files in `.claude/commands/`
 13. File Generation Summary:
     - **Design phase (Phases 3-4):** 2 files (YAML + test HTML)
     - **Implementation phase (Phases 5-8, after finalization):** 5 additional files (production HTML + C++ boilerplate + build config + checklist)
-    - **Total per mockup version:** 7 files
+    - **Total per finalized mockup version:** 7 files
+    - **Versions not finalized:** Only 2 files (design artifacts)
     ```
     plugins/[PluginName]/.ideas/mockups/
     ├── v[N]-ui.yaml                      # Specification
@@ -829,7 +831,7 @@ Total: 9 command files in `.claude/commands/`
   done
   grep -q "parameter-spec.md" .claude/skills/ui-mockup/SKILL.md && echo "✓ parameter-spec generation documented" || echo "✗ Missing parameter-spec"
   ```
-- Manual: STOP AND ASK LEX: "Please verify that `.claude/skills/ui-mockup/SKILL.md` includes a WARNING about member declaration order (Relays → WebView → Attachments) with an explanation of why this prevents crashes."
+- Manual: STOP AND ASK LEX: "Please verify that `.claude/skills/ui-mockup/SKILL.md` includes Phase 4.5 decision menu that STOPS after generating 2 design files and waits for user approval before generating the 5 implementation files."
 
 **CRITICAL:** After specifying manual verification, the implementation MUST pause and wait for Lex's confirmation before proceeding to the next task. Manual verification is a blocking checkpoint, not optional documentation.
 
@@ -1364,8 +1366,8 @@ echo -e "\n=== Phase 1 Verification Complete ==="
 - [ ] Does `.claude/skills/plugin-workflow/SKILL.md` include decision menus after each stage boundary (Stages 0-6)?
 - [ ] Does `.claude/skills/plugin-workflow/SKILL.md` include instructions to create `.continue-here.md` after Stage 0?
 - [ ] Does `.claude/skills/context-resume/SKILL.md` search all 3 handoff locations (`plugins/[Name]/.continue-here.md`, `plugins/[Name]/.ideas/.continue-here.md`, `plugins/[Name]/.ideas/mockups/.continue-here.md`)?
-- [ ] Does `.claude/skills/ui-mockup/SKILL.md` include a WARNING about member declaration order (Relays → WebView → Attachments)?
-- [ ] Does `.claude/skills/ui-mockup/SKILL.md` generate all 7 files per mockup version (yaml, html, test-html, editor.h, editor.cpp, cmake.txt, implementation-steps.md)?
+- [ ] Does `.claude/skills/ui-mockup/SKILL.md` include Phase 4.5 decision menu that stops after 2 design files?
+- [ ] Does `.claude/skills/ui-mockup/SKILL.md` generate 2 files in design phase, then 5 files only after user confirmation?
 - [ ] Does `.claude/skills/plugin-testing/SKILL.md` include all 5 automated tests with pass criteria?
 - [ ] Does `.claude/skills/plugin-lifecycle/SKILL.md` include cache clearing for both Ableton Live and Logic Pro?
 - [ ] Does `.claude/CLAUDE.md` show Phase 1 as complete and remain under 300 words?

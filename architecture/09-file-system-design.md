@@ -22,11 +22,6 @@ taches-claude-juce-system/
 │   │   ├── continue.md
 │   │   ├── install-plugin.md
 │   │   └── show-standalone.md
-│   ├── ui-templates/                 # Reusable UI design templates
-│   │   ├── vintage-hardware.yaml
-│   │   ├── modern-minimal.yaml
-│   │   ├── analog-modular.yaml
-│   │   └── [user-custom-templates].yaml
 │   ├── skills/                       # Workflow agents (Anthropic pattern)
 │   │   ├── plugin-workflow/
 │   │   │   ├── SKILL.md              # Orchestration logic (~400 lines)

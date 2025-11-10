@@ -155,7 +155,11 @@ Creates step-by-step guide for Stage 5 implementation.
 
 ## What It Creates
 
-**7 files per mockup version:**
+**Two-phase file generation:**
+- **Design phase (Phases 3-4):** 2 files (YAML spec + browser test HTML)
+- **Implementation phase (Phases 5-8, after finalization):** 5 additional files
+
+**Total per finalized mockup version: 7 files**
 
 ```
 plugins/[PluginName]/.ideas/mockups/
