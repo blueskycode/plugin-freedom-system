@@ -399,6 +399,18 @@ grep -q 'contextmenu.*preventDefault' v[N]-ui-test.html
 
 **See:** `references/ui-design-rules.md` for complete validation rules
 
+## Phase 5.4: Auto-Open in Browser
+
+**After validation passes, automatically open the test HTML in browser.**
+
+```bash
+open plugins/[PluginName]/.ideas/mockups/v[N]-ui-test.html
+```
+
+This allows immediate visual inspection without requiring user to manually navigate and open the file.
+
+**Note:** Uses `open` command (macOS). On other platforms, adjust command accordingly (e.g., `xdg-open` on Linux, `start` on Windows).
+
 ---
 
 ## ⚠️ CRITICAL STOP POINT - Phase 5.5: Design Decision Menu
