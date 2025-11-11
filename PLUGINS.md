@@ -28,7 +28,7 @@
 | TapeAge | 📦 Installed | 1.0.2 | 2025-11-11 |
 | ClapMachine | 💡 Ideated | - | 2025-11-10 |
 | DriveVerb | 🚧 Stage 2 | - | 2025-11-11 |
-| FlutterVerb | ✅ Working | 1.0.0 | 2025-11-11 |
+| FlutterVerb | 📦 Installed | 1.0.0 | 2025-11-11 |
 
 ### GainKnob
 
@@ -226,10 +226,11 @@ Algorithmic reverb with warm tape saturation applied only to the wet signal, plu
 
 ### FlutterVerb
 
-**Status:** ✅ **Working**
+**Status:** 📦 **Installed**
 **Version:** 1.0.0
 **Created:** 2025-11-11
 **Completed:** 2025-11-11
+**Installed:** 2025-11-11
 **Type:** Audio Effect (Reverb)
 **Complexity:** 5.0 (Complex)
 
@@ -268,6 +269,10 @@ Tape-driven plate reverb with extreme wow and flutter modulation for textured, a
 
 **Formats:** VST3, AU, Standalone
 
+**Installation Locations:**
+- VST3: `~/Library/Audio/Plug-Ins/VST3/FlutterVerb.vst3` (4.2 MB)
+- AU: `~/Library/Audio/Plug-Ins/Components/FlutterVerb.component` (4.1 MB)
+
 **UI Mockup:** v6 (finalized 2025-11-11)
 - Design validated against creative brief (no drift)
 - 7 implementation files generated (HTML, C++ header/impl, CMake, checklist)
@@ -297,12 +302,10 @@ Tape-driven plate reverb with extreme wow and flutter modulation for textured, a
 - **2025-11-11 (Stage 5.2):** Parameter binding complete - all 7 parameters bound to UI controls (Pattern #15, #16)
 - **2025-11-11 (Stage 5.3):** VU meter complete - real-time output level display with ballistics (fast attack, slow release)
 - **2025-11-11 (Stage 6):** Validation complete - 7 factory presets created, CHANGELOG.md generated, ready for installation
-- **2025-11-11 (v1.0.0):** Initial release - all stages complete
+- **2025-11-11 (v1.0.0):** Installed to system folders (VST3 + AU)
 
 **Known Issues:**
 - None
-
-**Installation:** Use `/install-plugin FlutterVerb` to deploy to system folders.
 
 **Last Updated:** 2025-11-11
 
