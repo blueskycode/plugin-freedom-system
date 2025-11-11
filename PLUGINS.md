@@ -25,7 +25,7 @@
 | Plugin Name | Status | Version | Last Updated |
 |-------------|--------|---------|--------------|
 | GainKnob | 📦 Installed | 1.2.3 | 2025-11-10 |
-| TapeAge | ✅ Working | 1.0.0 | 2025-11-11 |
+| TapeAge | 📦 Installed | 1.0.0 | 2025-11-11 |
 | ClapMachine | 💡 Ideated | - | 2025-11-10 |
 | DriveVerb | 💡 Ideated | - | 2025-11-11 |
 
@@ -86,10 +86,11 @@ Minimalist gain, pan, and DJ-style filter utility plugin with three knobs for vo
 
 ### TapeAge
 
-**Status:** ✅ **Working**
+**Status:** 📦 **Installed**
 **Version:** 1.0.0
 **Created:** 2025-11-10
 **Completed:** 2025-11-11
+**Installed:** 2025-11-11
 **Type:** Audio Effect
 
 **Description:**
@@ -113,6 +114,10 @@ Vintage tape saturator with warm saturation and musical degradation (wow/flutter
 
 **Formats:** VST3, AU, Standalone
 
+**Installation Locations:**
+- VST3: `~/Library/Audio/Plug-Ins/VST3/TapeAge.vst3` (4.1 MB)
+- AU: `~/Library/Audio/Plug-Ins/Components/TapeAge.component` (4.1 MB)
+
 **Lifecycle Timeline:**
 - **2025-11-10:** Creative brief completed
 - **2025-11-10 (Stage 0):** Research completed - DSP architecture documented
@@ -122,6 +127,7 @@ Vintage tape saturator with warm saturation and musical degradation (wow/flutter
 - **2025-11-10 (Stage 4):** DSP complete - all 4 phases (saturation, wow/flutter, dropout/noise, dry/wet)
 - **2025-11-10 (Stage 5):** GUI complete - WebView integrated with 3 parameter bindings and VU meter animation
 - **2025-11-11 (Stage 6):** Validation complete - pluginval passed, factory presets created, ready for installation
+- **2025-11-11 (v1.0.0):** Installed to system folders (VST3 + AU)
 
 **Known Issues:**
 - None
