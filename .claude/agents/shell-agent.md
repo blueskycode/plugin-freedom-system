@@ -3,13 +3,13 @@ name: shell-agent
 type: agent
 model: sonnet
 description: Implement plugin parameters and create APVTS shell (Stage 3)
-tools:
-  - Read
-  - Edit
-  - Write
-  - Bash
-  - mcp__context7__resolve-library-id
-  - mcp__context7__get-library-docs
+allowed-tools:
+  - Read      # Read contract files
+  - Edit      # Modify PluginProcessor files
+  - Write     # Create new files if needed
+  - Bash      # Verify build if needed
+  - mcp__context7__resolve-library-id  # Find JUCE library
+  - mcp__context7__get-library-docs  # JUCE documentation
 preconditions:
   - parameter-spec.md exists (from finalized UI mockup)
   - Stage 2 complete (foundation files exist)

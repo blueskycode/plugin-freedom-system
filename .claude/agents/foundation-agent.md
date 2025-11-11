@@ -3,12 +3,12 @@ name: foundation-agent
 type: agent
 model: sonnet
 description: Create JUCE plugin project structure and verify compilation (Stage 2)
-tools:
-  - Read
-  - Write
-  - Bash
-  - mcp__context7__resolve-library-id
-  - mcp__context7__get-library-docs
+allowed-tools:
+  - Read      # Read contract files
+  - Write     # Create CMakeLists.txt and skeleton files
+  - Bash      # Verify build if needed
+  - mcp__context7__resolve-library-id  # Find JUCE library
+  - mcp__context7__get-library-docs  # JUCE documentation
 preconditions:
   - creative-brief.md exists
   - architecture.md exists (from Stage 0)

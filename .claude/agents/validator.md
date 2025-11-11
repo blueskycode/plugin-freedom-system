@@ -6,7 +6,10 @@ description: |
   Invoke for complexity 4+ or when thorough review needed.
 model: sonnet
 extended_thinking: false
-tools: [Read, Grep, Bash]
+allowed-tools:
+  - Read      # Read source files and contracts
+  - Grep      # Search for patterns
+  - Bash      # Run validation scripts
 preconditions:
   - stage_complete: true
   - contracts_exist: true

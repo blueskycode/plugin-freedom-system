@@ -3,14 +3,14 @@ name: troubleshooter
 type: agent
 model: opus
 description: Deep research agent for build failures and JUCE problems
-tools:
-  - Bash
-  - Read
-  - Grep
-  - Glob
-  - WebSearch
-  - WebFetch
-  - mcp__context7__search_juce_docs
+allowed-tools:
+  - Read      # Read source files and logs
+  - Grep      # Search for error patterns
+  - Glob      # Find related files
+  - Bash      # Run diagnostic commands
+  - WebSearch # Search for error solutions
+  - WebFetch  # Fetch documentation
+  - mcp__context7__search_juce_docs  # JUCE docs
 ---
 
 # troubleshooter Agent

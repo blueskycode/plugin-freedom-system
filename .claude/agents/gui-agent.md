@@ -3,13 +3,13 @@ name: gui-agent
 type: agent
 model: sonnet
 description: Integrate WebView UI and bind parameters (Stage 5)
-tools:
-  - Read
-  - Edit
-  - Write
-  - Bash
-  - mcp__context7__resolve-library-id
-  - mcp__context7__get-library-docs
+allowed-tools:
+  - Read      # Read contract files and mockup
+  - Edit      # Modify PluginEditor files
+  - Write     # Create UI files
+  - Bash      # Download JUCE frontend library, verify build
+  - mcp__context7__resolve-library-id  # Find JUCE library
+  - mcp__context7__get-library-docs  # JUCE WebView documentation
 preconditions:
   - Finalized UI mockup exists (v[N]-ui.html)
   - parameter-spec.md exists (from mockup finalization)

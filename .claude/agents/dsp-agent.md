@@ -3,13 +3,13 @@ name: dsp-agent
 type: agent
 model: conditional  # Opus if complexity >= 4, Sonnet otherwise
 description: Implement audio processing and DSP algorithms (Stage 4)
-tools:
-  - Read
-  - Edit
-  - Write
-  - Bash
-  - mcp__context7__resolve-library-id
-  - mcp__context7__get-library-docs
+allowed-tools:
+  - Read      # Read contract files
+  - Edit      # Modify PluginProcessor files
+  - Write     # Create DSP utility files if needed
+  - Bash      # Verify build if needed
+  - mcp__context7__resolve-library-id  # Find JUCE library
+  - mcp__context7__get-library-docs  # JUCE DSP documentation
   - mcp__sequential-thinking__sequentialthinking  # For complex DSP (complexity >= 4)
 preconditions:
   - architecture.md exists (DSP component specifications)
