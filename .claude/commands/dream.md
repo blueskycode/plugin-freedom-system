@@ -17,14 +17,16 @@ What would you like to explore?
 1. New plugin idea
 2. Improve existing plugin
 3. Create UI mockup
-4. Research problem
+4. Create aesthetic template
+5. Research problem
 ```
 
 Route based on selection:
 - Option 1 → plugin-ideation skill (new plugin mode)
 - Option 2 → plugin-ideation skill (improvement mode)
 - Option 3 → ui-mockup skill
-- Option 4 → deep-research skill
+- Option 4 → aesthetic-dreaming skill
+- Option 5 → deep-research skill
 
 **With plugin name:**
 ```bash
@@ -41,10 +43,11 @@ None - brainstorming is always available.
 
 ## Output
 
-All /dream operations create documentation in `.ideas/` subdirectories:
+All /dream operations create documentation:
 - Creative briefs: `plugins/[Name]/.ideas/creative-brief.md`
 - Improvement proposals: `plugins/[Name]/.ideas/improvements/[feature].md`
 - UI mockups: `plugins/[Name]/.ideas/mockups/v[N]-*`
+- Aesthetic templates: `.claude/aesthetics/[aesthetic-id]/aesthetic.md`
 - Research findings: Documentation with solutions
 
 Nothing is implemented - this is purely exploratory.
