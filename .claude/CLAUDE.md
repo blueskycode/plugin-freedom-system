@@ -49,13 +49,25 @@
 - **plugin-improve** (`.claude/skills/plugin-improve/`) - Version management with regression testing (enhanced)
 
 ### Commands
+
+**Lifecycle:**
+- `/dream` - Ideate new plugin concept
+- `/implement [Name]` - Build plugin through 7-stage workflow
+- `/continue [Name]` - Resume paused workflow
+- `/improve [Name]` - Fix bugs or add features (with regression testing)
+
+**Deployment:**
 - `/install-plugin [Name]` - Install to system folders
-- `/uninstall [Name]` - Remove from system folders
-- `/sync-design [Name]` - Validate design alignment (mockup ↔ brief)
+- `/uninstall [Name]` - Remove binaries (keep source)
+- `/reset-to-ideation [Name]` - Remove implementation, keep idea/mockups
+- `/destroy [Name]` - Completely remove everything (with backup)
+
+**Quality:**
+- `/test [Name]` - Run validation suite
+- `/sync-design [Name]` - Validate mockup ↔ brief consistency
 - `/research [topic]` - Deep investigation (3-level protocol)
 - `/doc-fix` - Document solved problems (with option to promote to Required Reading)
 - `/add-critical-pattern` - Directly add current problem to Required Reading (fast path)
-- `/improve [Name]` - Fix bugs or add features (enhanced with regression testing)
 
 ### Knowledge Base
 - `troubleshooting/build-failures/` - Build and compilation errors
