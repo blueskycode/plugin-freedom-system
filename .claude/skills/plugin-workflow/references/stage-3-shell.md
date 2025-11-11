@@ -41,6 +41,16 @@ cat plugins/[PluginName]/.ideas/creative-brief.md
 cat plugins/[PluginName]/.ideas/architecture.md
 ```
 
+**CRITICAL: Read Required Patterns**
+
+Read JUCE 8 critical patterns file that MUST be followed:
+
+```typescript
+const criticalPatterns = await Read({
+  file_path: "troubleshooting/patterns/juce8-critical-patterns.md"
+});
+```
+
 ### 3. Invoke shell-agent via Task Tool
 
 Call shell-agent subagent with complete specification:
@@ -49,7 +59,13 @@ Call shell-agent subagent with complete specification:
 const shellResult = Task({
   subagent_type: "shell-agent",
   description: `Implement parameters for ${pluginName}`,
-  prompt: `Implement parameter system for plugin at plugins/${pluginName}.
+  prompt: `CRITICAL PATTERNS (MUST FOLLOW):
+
+${criticalPatterns}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Implement parameter system for plugin at plugins/${pluginName}.
 
 Inputs:
 - parameter-spec.md: plugins/${pluginName}/.ideas/parameter-spec.md

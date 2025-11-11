@@ -84,6 +84,14 @@ console.log(
 
 **If complexity ≤2 OR no phases defined:**
 
+**Read JUCE 8 critical patterns:**
+
+```typescript
+const criticalPatterns = await Read({
+  file_path: "troubleshooting/patterns/juce8-critical-patterns.md"
+});
+```
+
 Invoke gui-agent once for complete UI integration:
 
 ```typescript
@@ -92,7 +100,13 @@ const mockupPath = findLatestMockup(pluginName);
 const guiResult = Task({
   subagent_type: "gui-agent",
   description: `Integrate WebView UI for ${pluginName}`,
-  prompt: `Integrate WebView UI for plugin at plugins/${pluginName}.
+  prompt: `CRITICAL PATTERNS (MUST FOLLOW):
+
+${criticalPatterns}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Integrate WebView UI for plugin at plugins/${pluginName}.
 
 Inputs:
 - Finalized UI mockup: ${mockupPath}
@@ -165,6 +179,14 @@ phases.forEach((phase) => {
   console.log(`  - Phase ${phase.number}: ${phase.description}`);
 });
 
+**Read JUCE 8 critical patterns (used for all phases):**
+
+```typescript
+const criticalPatterns = await Read({
+  file_path: "troubleshooting/patterns/juce8-critical-patterns.md"
+});
+```
+
 // Execute each phase sequentially (same pattern as Stage 4)
 for (let i = 0; i < phases.length; i++) {
   const phase = phases[i];
@@ -174,7 +196,12 @@ for (let i = 0; i < phases.length; i++) {
   const phaseResult = Task({
     subagent_type: "gui-agent",
     description: `Implement UI Phase ${phase.number} for ${pluginName}`,
-    prompt: `
+    prompt: `CRITICAL PATTERNS (MUST FOLLOW):
+
+${criticalPatterns}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 You are gui-agent. Your task is to implement Phase ${phase.number} of UI for ${pluginName}.
 
 **Current Phase:** ${phase.number} - ${phase.description}

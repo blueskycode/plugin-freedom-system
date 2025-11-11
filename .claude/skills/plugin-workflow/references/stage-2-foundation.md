@@ -28,6 +28,16 @@ cat plugins/[PluginName]/.ideas/architecture.md
 cat plugins/[PluginName]/.ideas/plan.md
 ```
 
+**CRITICAL: Read Required Patterns**
+
+Read JUCE 8 critical patterns file that MUST be followed:
+
+```typescript
+const criticalPatterns = await Read({
+  file_path: "troubleshooting/patterns/juce8-critical-patterns.md"
+});
+```
+
 ### 2. Invoke foundation-agent via Task Tool
 
 Call foundation-agent subagent with complete specification:
@@ -36,7 +46,13 @@ Call foundation-agent subagent with complete specification:
 const foundationResult = Task({
   subagent_type: "foundation-agent",
   description: `Create build system for ${pluginName}`,
-  prompt: `Create foundation build for plugin at plugins/${pluginName}.
+  prompt: `CRITICAL PATTERNS (MUST FOLLOW):
+
+${criticalPatterns}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Create foundation build for plugin at plugins/${pluginName}.
 
 Inputs:
 - creative-brief.md: plugins/${pluginName}/.ideas/creative-brief.md

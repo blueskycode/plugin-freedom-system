@@ -43,13 +43,27 @@ console.log(
 
 **If complexity ≤2 OR no phases defined:**
 
+**Read JUCE 8 critical patterns:**
+
+```typescript
+const criticalPatterns = await Read({
+  file_path: "troubleshooting/patterns/juce8-critical-patterns.md"
+});
+```
+
 Invoke dsp-agent once for complete DSP implementation:
 
 ```typescript
 const dspResult = Task({
   subagent_type: "dsp-agent",
   description: `Implement DSP for ${pluginName}`,
-  prompt: `Implement audio processing for plugin at plugins/${pluginName}.
+  prompt: `CRITICAL PATTERNS (MUST FOLLOW):
+
+${criticalPatterns}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Implement audio processing for plugin at plugins/${pluginName}.
 
 Inputs:
 - architecture.md: plugins/${pluginName}/.ideas/architecture.md
@@ -117,6 +131,14 @@ phases.forEach((phase) => {
 });
 ```
 
+**Read JUCE 8 critical patterns (used for all phases):**
+
+```typescript
+const criticalPatterns = await Read({
+  file_path: "troubleshooting/patterns/juce8-critical-patterns.md"
+});
+```
+
 **Execute each phase sequentially:**
 
 ```typescript
@@ -131,7 +153,13 @@ for (let i = 0; i < phases.length; i++) {
   const phaseResult = Task({
     subagent_type: "dsp-agent",
     description: `Implement DSP Phase ${phase.number} for ${pluginName}`,
-    prompt: `Implement Phase ${phase.number} of DSP for plugin at plugins/${pluginName}.
+    prompt: `CRITICAL PATTERNS (MUST FOLLOW):
+
+${criticalPatterns}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Implement Phase ${phase.number} of DSP for plugin at plugins/${pluginName}.
 
 Inputs:
 - architecture.md: plugins/${pluginName}/.ideas/architecture.md
