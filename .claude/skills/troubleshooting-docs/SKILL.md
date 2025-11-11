@@ -2,23 +2,31 @@
 name: troubleshooting-docs
 description: Capture problem solutions in searchable knowledge base
 allowed-tools:
-  - Read  # Parse conversation context
-  - Write  # Create resolution docs
-  - Bash  # Create directories
-  - Grep  # Search existing docs
+  - Read # Parse conversation context
+  - Write # Create resolution docs
+  - Bash # Create symlinks for dual-indexing
+  - Grep # Search existing docs
 preconditions:
   - Problem has been solved (not in-progress)
   - Solution has been verified working
-model: sonnet
 ---
 
 # troubleshooting-docs Skill
 
-**Purpose:** Automatically document solved problems to build searchable institutional knowledge organized by symptom category.
+**Purpose:** Automatically document solved problems to build searchable institutional knowledge with dual-indexing (by-plugin and by-symptom).
 
 ## Overview
 
-This skill captures problem solutions immediately after confirmation, creating structured documentation that serves as a searchable knowledge base for future sessions. Documentation is organized by symptom category (build-failures, parameter-issues, etc.) with plugin name in the filename and YAML frontmatter.
+This skill captures problem solutions immediately after confirmation, creating structured documentation that serves as a searchable knowledge base for future sessions. Documentation is dual-indexed: organized by plugin name AND by symptom category, enabling fast lookup from multiple entry points.
+
+**Why dual-indexing matters:**
+
+When researching problems, you might know the plugin name OR the symptom, but not both:
+
+- "What build issues has DelayPlugin had?" → Search by-plugin/DelayPlugin/
+- "What causes parameter validation failures?" → Search by-symptom/validation-problems/
+
+Both paths lead to the same documentation (via symlinks).
 
 ---
 
@@ -27,6 +35,7 @@ This skill captures problem solutions immediately after confirmation, creating s
 ### Step 1: Detect Confirmation
 
 **Auto-invoke after phrases:**
+
 - "that worked"
 - "it's fixed"
 - "working now"
@@ -36,12 +45,14 @@ This skill captures problem solutions immediately after confirmation, creating s
 **OR manual:** `/doc-fix` command
 
 **Non-trivial problems only:**
+
 - Multiple investigation attempts needed
 - Tricky debugging that took time
 - Non-obvious solution
 - Future sessions would benefit
 
 **Skip documentation for:**
+
 - Simple typos
 - Obvious syntax errors
 - Trivial fixes immediately corrected
@@ -51,6 +62,7 @@ This skill captures problem solutions immediately after confirmation, creating s
 Extract from conversation history:
 
 **Required information:**
+
 - **Plugin name**: Which plugin had the problem
 - **Symptom**: Observable error/behavior (exact error messages)
 - **Investigation attempts**: What didn't work and why
@@ -59,12 +71,14 @@ Extract from conversation history:
 - **Prevention**: How to avoid in future
 
 **Environment details:**
+
 - JUCE version
 - Stage (0-6 or post-implementation)
 - OS version
 - File/line references
 
 **Ask user if missing critical context:**
+
 ```
 I need a few details to document this properly:
 
@@ -84,14 +98,15 @@ Search troubleshooting/ for similar issues:
 grep -r "exact error phrase" troubleshooting/
 
 # Search by symptom category
-ls troubleshooting/[category]/
+ls troubleshooting/by-symptom/[category]/
 ```
 
 **If similar issue found:**
 
 Present options:
+
 ```
-Found similar issue: troubleshooting/build-failures/similar-issue-OtherPlugin-20251109.md
+Found similar issue: troubleshooting/by-plugin/OtherPlugin/build-failures/similar-issue.md
 
 What's next?
 1. Create new doc with cross-reference (recommended)
@@ -105,12 +120,14 @@ What's next?
 Format: `[sanitized-symptom]-[plugin]-[YYYYMMDD].md`
 
 **Sanitization rules:**
+
 - Lowercase
 - Replace spaces with hyphens
 - Remove special characters except hyphens
 - Truncate to reasonable length (< 80 chars)
 
 **Examples:**
+
 - `missing-juce-dsp-module-DelayPlugin-20251110.md`
 - `parameter-not-saving-state-ReverbPlugin-20251110.md`
 - `webview-crash-on-resize-TapeAgePlugin-20251110.md`
@@ -123,6 +140,7 @@ Format: `[sanitized-symptom]-[plugin]-[YYYYMMDD].md`
 Read `.claude/skills/troubleshooting-docs/references/yaml-schema.md` for validation rules.
 
 **Required fields:**
+
 - `plugin`: String (must exist in PLUGINS.md - warning if not)
 - `date`: String (YYYY-MM-DD format)
 - `symptom`: String (brief description)
@@ -130,6 +148,7 @@ Read `.claude/skills/troubleshooting-docs/references/yaml-schema.md` for validat
 - `tags`: Array (one or more of: build, runtime, validation, webview, dsp, gui, parameters, cmake, juce-api)
 
 **Validation process:**
+
 ```bash
 # Check date format
 if [[ ! "$DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
@@ -151,6 +170,7 @@ fi
 ```
 
 **BLOCK if validation fails:**
+
 ```
 ❌ YAML validation failed
 
@@ -168,6 +188,7 @@ Present retry with corrected values, don't proceed until valid.
 **Determine category from tags:**
 
 Auto-detect primary category:
+
 - `build` → build-failures/
 - `runtime` → runtime-issues/
 - `validation` → validation-problems/
@@ -178,26 +199,43 @@ Auto-detect primary category:
 - `cmake` → build-failures/
 - `juce-api` → api-usage/
 
-**Create file in category directory:**
+**Create real file in by-plugin:**
+
 ```bash
+PLUGIN="[PluginName]"
 CATEGORY="[detected-category]"
 FILENAME="[generated-filename].md"
-FILE_PATH="troubleshooting/${CATEGORY}/${FILENAME}"
+REAL_FILE="troubleshooting/by-plugin/${PLUGIN}/${CATEGORY}/${FILENAME}"
 
 # Create directory if needed
-mkdir -p "troubleshooting/${CATEGORY}"
+mkdir -p "troubleshooting/by-plugin/${PLUGIN}/${CATEGORY}"
 
 # Write documentation
-cat > "$FILE_PATH" << 'EOF'
+cat > "$REAL_FILE" << 'EOF'
 [YAML frontmatter]
 [Documentation content from template]
 EOF
 ```
 
+**Create symlink in by-symptom:**
+
+```bash
+SYMLINK="troubleshooting/by-symptom/${CATEGORY}/${FILENAME}"
+
+# Create directory if needed
+mkdir -p "troubleshooting/by-symptom/${CATEGORY}"
+
+# Create relative symlink
+cd "troubleshooting/by-symptom/${CATEGORY}"
+ln -s "../../by-plugin/${PLUGIN}/${CATEGORY}/${FILENAME}" "${FILENAME}"
+cd -
+```
+
 **Documentation template:**
 
 Use template from `assets/resolution-template.md` with populated values:
-- YAML frontmatter with validated fields (plugin name included)
+
+- YAML frontmatter with validated fields
 - Problem title (descriptive)
 - Symptom section (exact errors, observable behavior)
 - Context section (plugin, stage, JUCE version, OS)
@@ -208,23 +246,15 @@ Use template from `assets/resolution-template.md` with populated values:
 - Related issues (cross-references if found in Step 3)
 - References (JUCE docs, forum threads, external resources)
 
-**Finding plugin-specific docs:**
-```bash
-# All docs for a specific plugin
-grep -l "plugin: DelayPlugin" troubleshooting/**/*.md
-
-# Or search by filename pattern
-find troubleshooting/ -name "*-DelayPlugin-*.md"
-```
-
 ### Step 7: Cross-Reference
 
 If similar issues found in Step 3:
 
 **Update existing doc:**
+
 ```bash
 # Add Related Issues link to similar doc
-echo "- See also: [$FILENAME]($FILE_PATH)" >> [similar-doc.md]
+echo "- See also: [$FILENAME]($REAL_FILE)" >> [similar-doc.md]
 ```
 
 **Update new doc:**
@@ -233,6 +263,7 @@ Already includes cross-reference from Step 6.
 **Update patterns if applicable:**
 
 If this represents a common pattern (3+ similar issues):
+
 ```bash
 # Add to troubleshooting/patterns/common-solutions.md
 cat >> troubleshooting/patterns/common-solutions.md << 'EOF'
@@ -259,9 +290,9 @@ After successful documentation:
 ```
 ✓ Solution documented
 
-File created: troubleshooting/[category]/[filename].md
-Plugin: [PluginName]
-Category: [category]
+File created:
+- Real: troubleshooting/by-plugin/[Plugin]/[category]/[filename].md
+- Symlink: troubleshooting/by-symptom/[category]/[filename].md
 
 What's next?
 1. Continue workflow (recommended)
@@ -274,25 +305,30 @@ What's next?
 **Handle responses:**
 
 **Option 1: Continue workflow**
+
 - Return to calling skill/workflow
 - Documentation is complete
 
 **Option 2: Link related issues**
+
 - Prompt: "Which doc to link? (provide filename or describe)"
 - Search troubleshooting/ for the doc
 - Add cross-reference to both docs
 - Confirm: "✓ Cross-reference added"
 
 **Option 3: Update common patterns**
+
 - Check if 3+ similar issues exist
 - If yes: Add pattern to troubleshooting/patterns/common-solutions.md
 - If no: "Need 3+ similar issues to establish pattern (currently N)"
 
 **Option 4: View documentation**
+
 - Display the created documentation
 - Present decision menu again
 
 **Option 5: Other**
+
 - Ask what they'd like to do
 
 ---
@@ -300,15 +336,18 @@ What's next?
 ## Integration Points
 
 **Invoked by:**
+
 - Auto-detection after success phrases
 - `/doc-fix` command
 - Any skill after solution confirmation
 - Manual: "document this solution"
 
 **Invokes:**
+
 - None (terminal skill)
 
 **Reads:**
+
 - Conversation history (for context extraction)
 - `PLUGINS.md` (validate plugin name)
 - `troubleshooting/` (search existing docs)
@@ -316,10 +355,13 @@ What's next?
 - `references/yaml-schema.md` (validation rules)
 
 **Creates:**
-- `troubleshooting/[category]/[filename].md` (documentation file)
+
+- `troubleshooting/by-plugin/[Plugin]/[category]/[filename].md` (real file)
+- `troubleshooting/by-symptom/[category]/[filename].md` (symlink)
 - Updates to `troubleshooting/patterns/common-solutions.md` (if pattern detected)
 
 **Updates:**
+
 - Existing docs (cross-references)
 - Pattern library (if applicable)
 
@@ -330,31 +372,42 @@ What's next?
 Documentation is successful when:
 
 - ✅ YAML frontmatter validated (all required fields, correct formats)
-- ✅ File created in troubleshooting/[category]/[filename].md
+- ✅ Real file created in troubleshooting/by-plugin/[Plugin]/[category]/
+- ✅ Symlink created in troubleshooting/by-symptom/[category]/
 - ✅ Documentation follows template structure
 - ✅ All sections populated with relevant content
 - ✅ Code examples included (if applicable)
 - ✅ Cross-references added (if similar issues exist)
-- ✅ File is searchable (descriptive filename, plugin in filename and YAML, tags)
+- ✅ File is searchable (descriptive filename, tags)
 
 ---
 
 ## Error Handling
 
 **Missing context:**
+
 - Ask user for missing details
 - Don't proceed until critical info provided
 
 **YAML validation failure:**
+
 - Show specific errors
 - Present retry with corrected values
 - BLOCK until valid
 
+**Symlink creation failure (Windows):**
+
+- Detect if `ln -s` fails
+- Fallback: Duplicate file instead of symlink
+- Warn user: "Symlinks not supported, using file duplication"
+
 **Similar issue ambiguity:**
+
 - Present multiple matches
 - Let user choose: new doc, update existing, or link as duplicate
 
 **Plugin not in PLUGINS.md:**
+
 - Warn but don't block
 - Proceed with documentation
 - Suggest: "Add [Plugin] to PLUGINS.md if not there"
@@ -377,17 +430,18 @@ Documentation is successful when:
 **Common pitfalls:**
 
 - Forgetting to create directories before writing files
+- Using absolute symlink paths (breaks portability)
 - Missing YAML validation (creates invalid docs)
 - Vague descriptions (not searchable)
 - No code examples (harder to understand solution)
 - No cross-references (knowledge stays siloed)
-- Plugin name not in filename (harder to find plugin-specific issues)
 
 ---
 
 ## Quality Guidelines
 
 **Good documentation has:**
+
 - ✅ Exact error messages (copy-paste from output)
 - ✅ Specific file:line references
 - ✅ Observable symptoms (what you saw, not interpretations)
@@ -398,6 +452,7 @@ Documentation is successful when:
 - ✅ Cross-references (related issues)
 
 **Avoid:**
+
 - ❌ Vague descriptions ("something was wrong")
 - ❌ Missing technical details ("fixed the code")
 - ❌ No context (which version? which file?)
@@ -432,16 +487,18 @@ Documentation is successful when:
    ```
    ✅ Valid
 6. **Create documentation:**
-   - File: `troubleshooting/parameter-issues/parameter-not-saving-decay-ReverbPlugin-20251110.md`
+   - Real: `troubleshooting/by-plugin/ReverbPlugin/parameter-issues/parameter-not-saving-decay-ReverbPlugin-20251110.md`
+   - Symlink: `troubleshooting/by-symptom/parameter-issues/parameter-not-saving-decay-ReverbPlugin-20251110.md`
 7. **Cross-reference:** None needed (no similar issues)
 
 **Output:**
+
 ```
 ✓ Solution documented
 
-File created: troubleshooting/parameter-issues/parameter-not-saving-decay-ReverbPlugin-20251110.md
-Plugin: ReverbPlugin
-Category: parameter-issues
+File created:
+- Real: troubleshooting/by-plugin/ReverbPlugin/parameter-issues/parameter-not-saving-decay-ReverbPlugin-20251110.md
+- Symlink: troubleshooting/by-symptom/parameter-issues/parameter-not-saving-decay-ReverbPlugin-20251110.md
 
 What's next?
 1. Continue workflow (recommended)

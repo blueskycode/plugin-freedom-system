@@ -1,15 +1,16 @@
 ---
 name: plugin-improve
-description: Fix bugs and add features with versioning and backups
+description: Fix bugs and add features with versioning, regression testing, and backups
 allowed-tools:
   - Read
   - Write
   - Edit
   - Bash
-  - Task # For deep-research (Tier 3)
+  - Task # For deep-research (Tier 3) and plugin-testing (regression tests)
 preconditions:
   - Plugin status must be ✅ Working OR 📦 Installed
   - Plugin must NOT be 🚧 In Development
+model: sonnet
 ---
 
 # plugin-improve Skill
@@ -161,6 +162,47 @@ Proceed with recommended approach? (y/n): \_
 
 If user says no, ask which alternative or if they want different approach.
 
+## Phase 0.9: Backup Verification
+
+**Goal:** Ensure rollback is possible if improvement fails
+
+**Check if backup exists:**
+
+```bash
+BACKUP_PATH="backups/${PLUGIN_NAME}/v${CURRENT_VERSION}/"
+if [[ ! -d "$BACKUP_PATH" ]]; then
+  echo "⚠️ No backup found for v${CURRENT_VERSION}"
+  CREATE_BACKUP=true
+fi
+```
+
+**Create backup if missing:**
+
+```bash
+mkdir -p "backups/${PLUGIN_NAME}/v${CURRENT_VERSION}/"
+cp -r "plugins/${PLUGIN_NAME}/" "backups/${PLUGIN_NAME}/v${CURRENT_VERSION}/"
+echo "✓ Backup created: backups/${PLUGIN_NAME}/v${CURRENT_VERSION}/"
+```
+
+**Verify backup integrity:**
+
+```bash
+# Use verify-backup.sh script
+./scripts/verify-backup.sh "${PLUGIN_NAME}" "${CURRENT_VERSION}"
+```
+
+**Present verification results:**
+
+```
+✓ Backup verified: backups/[PluginName]/v[CurrentVersion]/
+
+- All source files present
+- CMakeLists.txt valid
+- Dry-run build successful
+
+Rollback available if needed.
+```
+
 ## Phase 1: Pre-Implementation Checks
 
 **Load current state:**
@@ -246,11 +288,11 @@ This backup can be restored if anything goes wrong.
 
 **Log changes as you go for CHANGELOG.**
 
-## Phase 4: CHANGELOG Update
+## Phase 4: Enhanced CHANGELOG Update
 
-**Update CHANGELOG.md following Keep a Changelog format:**
+**Update CHANGELOG.md with enhanced format:**
 
-Add new version entry at top:
+Add new version entry at top with technical details:
 
 ```markdown
 # Changelog
@@ -264,21 +306,51 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - [New feature 1]
-- [New feature 2]
+  - [Detailed description]
+  - [User benefit]
 
 ### Changed
 
 - [Modified behavior 1]
-- [Modified behavior 2]
 
 ### Fixed
 
 - [Bug fix 1]
-- [Bug fix 2]
+  - Root cause: [Technical explanation]
+  - Impact: [What was affected]
 
-### Removed
+### Technical
 
-- [Deprecated feature if any]
+- Parameter changes:
+  - Added: [PARAM_ID] (ID: "paramId", range: [min,max], default: value)
+  - Modified: [PARAM_ID] (changed range from X to Y)
+  - Removed: [PARAM_ID] (deprecated, use [NEW_PARAM] instead)
+- DSP changes:
+  - [Description of processBlock modifications]
+  - [Algorithm improvements]
+- UI changes:
+  - [WebView or native UI updates]
+  - [Layout modifications]
+- Dependencies:
+  - [New JUCE modules added]
+  - [External dependencies]
+
+### Testing
+
+- Regression tests: [✅ X/Y passing | ⚠️ See notes below]
+- Baseline version: v[X.Y.Z]
+- New test coverage: [Description of new tests if added]
+
+### Migration Notes (MAJOR versions only)
+
+- v[X-1].x presets compatible: [Yes/No + explanation]
+- Breaking changes:
+  - [List parameter ID changes]
+  - [List removed parameters]
+  - [State format changes]
+- Workarounds:
+  - [How to adapt existing projects]
+  - [Preset conversion steps if needed]
 
 ## [Previous Version] - [Date]
 
@@ -287,12 +359,53 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 **Sections to use:**
 
-- **Added:** New features
+- **Added:** New features (with detailed descriptions)
 - **Changed:** Changes to existing functionality
-- **Deprecated:** Soon-to-be removed features
+- **Fixed:** Bug fixes (with root cause explanations)
 - **Removed:** Removed features
-- **Fixed:** Bug fixes
-- **Security:** Security fixes (rare for audio plugins)
+- **Technical:** Implementation details (parameters, DSP, UI, dependencies)
+- **Testing:** Regression test results and coverage
+- **Migration Notes:** Breaking changes and workarounds (MAJOR versions only)
+
+**Change type auto-detection:**
+
+- PATCH (v1.0.0 → v1.0.1): Use "Fixed" section primarily
+- MINOR (v1.0.0 → v1.1.0): Use "Added" or "Changed" sections
+- MAJOR (v1.0.0 → v2.0.0): Include "Migration Notes" section
+
+**Enhanced changelog example:**
+
+```markdown
+## [1.1.0] - 2025-11-10
+
+### Added
+
+- Tempo sync parameter (TEMPO_SYNC)
+  - Locks delay time to DAW tempo
+  - Supports 1/16 to 4 bars
+  - Automatic BPM detection via AudioPlayHead
+
+### Changed
+
+- Improved feedback algorithm for warmer saturation
+
+### Technical
+
+- Added parameter: TEMPO_SYNC (ID: "tempoSync", range: [0,1], default: 0)
+- Added juce::AudioPlayHead integration in processBlock
+- New WebView relay: tempoSyncRelay
+- Modified DSP: DelayLine now supports tempo-locked timing
+
+### Testing
+
+- Regression tests: ✅ 5/5 passing (baseline: v1.0.0)
+- Added test: Tempo sync accuracy (±1ms)
+
+### Migration Notes
+
+- v1.0 presets fully compatible (TEMPO_SYNC defaults to false, preserves behavior)
+- No breaking changes
+```
 
 ## Phase 5: Build & Test
 
@@ -345,6 +458,109 @@ Choose (1-4): _
 ```
 
 If tests fail, present investigation options.
+
+## Phase 5.5: Regression Testing
+
+**Check:** Does `.claude/skills/plugin-testing/SKILL.md` exist?
+
+**If NO:** Skip to Phase 6 (add warning to changelog: "Manual regression testing required")
+
+**If YES:** Run regression tests
+
+### Regression Test Process
+
+**1. Determine baseline version:**
+
+- If improving v1.0.0 → v1.1.0, baseline is v1.0.0
+- Check if backup exists: `backups/[Plugin]/v[baseline]/`
+- If no backup: Skip regression tests (warn user)
+
+**2. Build baseline version:**
+
+```bash
+# Temporarily checkout baseline
+cd backups/[Plugin]/v[baseline]/
+../../scripts/build-and-install.sh --no-install
+```
+
+**3. Run tests on baseline:**
+
+- Invoke plugin-testing skill on baseline build
+- Capture results: BASELINE_RESULTS
+
+**4. Run tests on current version:**
+
+- Invoke plugin-testing skill on new build
+- Capture results: CURRENT_RESULTS
+
+**5. Compare results:**
+
+```typescript
+interface RegressionReport {
+  baseline_version: string
+  current_version: string
+  tests_run: number
+  baseline_passing: number
+  current_passing: number
+  new_failures: TestCase[]  // Regressions!
+  new_passes: TestCase[]    // Fixed bugs
+  unchanged: number
+}
+```
+
+**6. Present findings:**
+
+#### If No Regressions:
+
+```
+✓ Regression tests passed (5/5 tests, no new failures)
+
+What's next?
+1. Continue to git workflow (recommended)
+2. Review test details
+3. Other
+```
+
+#### If Regressions Detected:
+
+```
+⚠️ Regression detected - new failures found
+
+**Baseline (v1.0.0):** 5/5 tests passing
+**Current (v1.1.0):** 3/5 tests passing
+
+**New failures:**
+1. Parameter Response Test - GAIN parameter no longer affects audio
+2. CPU Performance Test - Real-time factor increased from 0.05 to 0.15
+
+**Recommendation:** Fix regressions before proceeding
+
+What's next?
+1. Investigate failures - Debug issues (recommended)
+2. View test output - See detailed logs
+3. Continue anyway - Accept regressions (not recommended)
+4. Rollback changes - Revert to v1.0.0
+5. Other
+```
+
+### Rollback Mechanism
+
+If user chooses "Rollback changes":
+
+1. Verify backup exists: `backups/[Plugin]/v[baseline]/`
+2. Copy all files from backup to `plugins/[Plugin]/`
+3. Rebuild and reinstall
+4. Update PLUGINS.md status
+5. Git reset if commits were made
+6. Confirm rollback success
+
+```bash
+# Rollback script
+rm -rf plugins/[Plugin]
+cp -r backups/[Plugin]/v[baseline]/ plugins/[Plugin]/
+cd plugins/[Plugin]
+../../scripts/build-and-install.sh
+```
 
 ## Phase 6: Git Workflow
 
@@ -518,6 +734,27 @@ Backup location: backups/[PluginName]-v[X.Y.Z]-[timestamp]
 - State format changed
 - Requires preset migration
 - Should be rare
+
+## Phase 7 Enhancements
+
+This skill has been enhanced in Phase 7 with:
+
+- **Regression testing** (Phase 5.5): Automatically detects breaking changes by comparing baseline version tests to current version
+- **Enhanced changelogs** (Phase 4): Technical details section includes parameter changes, DSP modifications, UI updates, dependencies. Migration notes for MAJOR versions.
+- **Backup verification** (Phase 0.9): Ensures rollback is possible before making any changes. Uses `verify-backup.sh` script.
+- **Rollback mechanism**: One-command restore to previous version if regressions detected
+
+**Benefits:**
+
+- Catch breaking changes automatically before deployment
+- Document technical implementation details for future reference
+- Safe iteration (always have verified backup)
+- Quick rollback if improvement introduces problems
+
+**See:**
+
+- `architecture/17-testing-strategy.md` - Regression test specifications
+- `scripts/verify-backup.sh` - Backup integrity verification script
 
 ## Integration Points
 

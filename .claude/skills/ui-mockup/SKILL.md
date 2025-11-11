@@ -258,30 +258,35 @@ Files generated:
 - v[N]-ui-test.html (browser-testable mockup)
 
 What do you think?
-1. Provide refinements (iterate on design) ← Creates v[N+1]
-2. Finalize and create implementation files (recommended if satisfied)
-3. Save as aesthetic template (add to library for reuse)
-4. Finalize AND save aesthetic (do both operations)
-5. Test in browser (open v[N]-ui-test.html)
-6. Validate WebView constraints (run checks)
-7. Other
+1. Check alignment - Run design-sync validation (recommended before finalizing)
+2. Provide refinements (iterate on design) ← Creates v[N+1]
+3. Finalize and create implementation files (if satisfied and aligned)
+4. Save as aesthetic template (add to library for reuse)
+5. Finalize AND save aesthetic (do both operations)
+6. Test in browser (open v[N]-ui-test.html)
+7. Validate WebView constraints (run checks)
+8. Other
 
-Choose (1-7): _
+Choose (1-8): _
 ```
 
 **WAIT for user response before continuing.**
 
 **Option handling:**
-- **Option 1**: User gives feedback → Return to Phase 3 with new version number (v2, v3, etc.)
-- **Option 2**: User approves → Proceed to Phase 5-8 (generate remaining 5 files)
-- **Option 3**: Save aesthetic → Invoke ui-template-library skill with "save" operation
+- **Option 1**: Check alignment → Invoke design-sync skill to validate mockup ↔ creative brief consistency
+  - Detects drift (parameter mismatches, missing features, style divergence)
+  - Returns with findings, user resolves any issues
+  - After resolution, return to this decision menu
+- **Option 2**: User gives feedback → Return to Phase 3 with new version number (v2, v3, etc.)
+- **Option 3**: User approves → Proceed to Phase 5-8 (generate remaining 5 files)
+- **Option 4**: Save aesthetic → Invoke ui-template-library skill with "save" operation
   ```
   Invoke Skill tool:
   - skill: "ui-template-library"
   - prompt: "Save aesthetic from plugins/[PluginName]/.ideas/mockups/v[N]-ui.html"
   ```
   After saving, return to decision menu
-- **Option 4**: Save aesthetic first, then proceed to Phase 5-8
+- **Option 5**: Save aesthetic first, then proceed to Phase 5-8
   ```
   1. Invoke ui-template-library "save" operation
   2. Wait for confirmation

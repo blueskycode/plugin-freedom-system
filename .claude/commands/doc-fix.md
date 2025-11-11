@@ -9,7 +9,7 @@ Invoke the troubleshooting-docs skill to document a recently solved problem.
 
 ## Purpose
 
-Captures problem solutions while context is fresh, creating structured documentation organized by symptom category. Plugin name included in filename and YAML frontmatter for easy filtering.
+Captures problem solutions while context is fresh, creating structured documentation in a dual-indexed knowledge base (searchable by plugin name OR symptom category).
 
 ## Usage
 
@@ -35,7 +35,9 @@ Captures problem solutions while context is fresh, creating structured documenta
 
 ## What It Creates
 
-**Documentation file:** `troubleshooting/[category]/[symptom]-[Plugin]-[YYYYMMDD].md`
+**Dual-indexed documentation:**
+- Real file: `troubleshooting/by-plugin/[Plugin]/[category]/[filename].md`
+- Symlink: `troubleshooting/by-symptom/[category]/[filename].md`
 
 **Categories auto-detected from problem:**
 - build-failures/
@@ -52,9 +54,9 @@ Captures problem solutions while context is fresh, creating structured documenta
 ```
 ✓ Solution documented
 
-File created: troubleshooting/parameter-issues/[symptom]-[Plugin]-20251110.md
-Plugin: [PluginName]
-Category: parameter-issues
+File created:
+- Real: troubleshooting/by-plugin/ReverbPlugin/parameter-issues/[filename].md
+- Symlink: troubleshooting/by-symptom/parameter-issues/[filename].md
 
 This documentation will be searched by deep-research skill as Level 1 (Fast Path)
 when similar issues occur.
