@@ -5,6 +5,46 @@ All notable changes to FlutterVerb will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2025-11-11
+
+### Fixed
+- **VU meter animation**: VU meter now displays with smooth ballistic needle movement
+  - Root cause: Missing requestAnimationFrame loop and target/current angle tracking
+  - Impact: VU meter needle didn't animate despite receiving events
+  - Solution: Added animateVUMeter() loop with attack/decay ballistics (TapeAge pattern)
+
+- **MOD_MODE toggle UI**: Toggle switch now clickable and visually updates
+  - Root cause: JavaScript used `getToggleButtonState()` instead of `getToggleState()`
+  - Impact: Switch not clickable, no visual feedback
+  - Solution: Changed to `Juce.getToggleState()` (correct JUCE WebView API)
+
+- **MOD_MODE functionality**: TONE and DRIVE now correctly route based on mode
+  - Root cause: TONE/DRIVE applied after dry/wet split, only affected wet signal in both modes
+  - Impact: Mode 1 (WET+DRY) didn't affect dry signal as expected
+  - Solution: Refactored DSP to apply effects before split in Mode 1, after reverb in Mode 0
+
+- **SIZE/DECAY independence**: Decay now works at all SIZE settings including 0%
+  - Root cause: JUCE Reverb roomSize=0 collapses delay lines, making decay ineffective
+  - Impact: Decay knob had no effect when SIZE=0%
+  - Solution: Map SIZE to minimum base roomSize (0.2-0.6), multiply by decay factor (0.5-2.0x)
+
+### Technical
+- DSP changes:
+  - SIZE mapping: 0-100% → roomSize 0.2-0.6 (base) × 0.5-2.0 (decay multiplier)
+  - TONE/DRIVE extracted into lambdas for conditional routing
+  - Signal flow Mode 0: Input → Reverb → Mod → Drive → Tone → Mix
+  - Signal flow Mode 1: Input → Mod → Drive → Tone → [Split/Reverb/Mix]
+- UI changes:
+  - MOD_MODE: Changed to `getValue()`/`setValue()` with boolean type
+  - VU meter: Added currentNeedleAngle/targetNeedleAngle tracking
+  - VU meter: requestAnimationFrame loop with 0.4 attack / 0.15 decay speeds
+
+### Testing
+- VU meter: Verified smooth needle movement with ballistic response
+- MOD_MODE toggle: Click response confirmed, visual state syncs with parameter
+- MOD_MODE routing: Audio tests confirm TONE affects both paths in Mode 1
+- SIZE/DECAY: Verified decay works at SIZE=0%, independent parameter control
+
 ## [1.0.1] - 2025-11-11
 
 ### Fixed

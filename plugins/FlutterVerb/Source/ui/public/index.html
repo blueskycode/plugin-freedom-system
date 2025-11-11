@@ -819,20 +819,19 @@
         // ----------------------------------------------------------------
         // MOD_MODE PARAMETER BINDING (Toggle)
         // ----------------------------------------------------------------
-        // Fix 4: Use getSliderState for boolean parameter instead of getToggleButtonState
+        // Fix 4: Use getToggleState for boolean parameter (correct JUCE API)
 
-        const modModeState = Juce.getSliderState("MOD_MODE");
+        const modModeState = Juce.getToggleState("MOD_MODE");
         const modModeToggle = document.getElementById("modModeToggle");
         const modModeLabel = document.getElementById("modModeState");
 
         modModeToggle.addEventListener("click", () => {
             const currentValue = modModeState.getValue();
-            const newValue = currentValue < 0.5 ? 1.0 : 0.0;  // Toggle between 0 and 1
-            modModeState.setValue(newValue);
+            modModeState.setValue(!currentValue);  // Toggle boolean
         });
 
-        modModeState.valueChangedEvent.addListener((value) => {
-            updateToggleVisual(value >= 0.5);  // Active if value >= 0.5
+        modModeState.valueChangedEvent.addListener(() => {
+            updateToggleVisual(modModeState.getValue());  // Update visual from boolean value
         });
 
         // ----------------------------------------------------------------
@@ -860,10 +859,12 @@
         // ----------------------------------------------------------------
 
         const vuNeedle = document.getElementById('vuNeedle');
+        let currentNeedleAngle = -45;  // Start at minimum position
+        let targetNeedleAngle = -45;
 
         // Fix 5: Listen for VU meter updates from C++ (emitEventIfBrowserIsVisible)
         // Now receives dB values directly (like TapeAge pattern)
-        window.updateVUMeter = (dbLevel) => {
+        function updateVUMeter(dbLevel) {
             // VU meter scale: -60dB to 0dB (matching visual markings)
             const minDB = -60;
             const maxDB = 0;
@@ -874,30 +875,52 @@
             // Normalize to 0-1 range
             const normalizedLevel = (clampedDB - minDB) / (maxDB - minDB);
 
-            updateVUMeterNeedle(normalizedLevel);
-        };
+            // Convert to needle angle: -45deg (left) to +45deg (right)
+            targetNeedleAngle = -45 + (normalizedLevel * 90);
+        }
 
-        function updateVUMeterNeedle(level) {
-            // VU meter range: -45° (left) to +45° (right) = 90° total
-            const minAngle = -45;
-            const maxAngle = 45;
-            const angle = minAngle + (level * (maxAngle - minAngle));
+        // Smooth needle animation (ballistic meter behavior)
+        function animateVUMeter() {
+            // Lerp current angle toward target with decay
+            // Fast attack, slower decay (authentic VU meter ballistics)
+            const attackSpeed = 0.4;  // Fast rise
+            const decaySpeed = 0.15;   // Slow fall
 
-            // Apply rotation with smooth CSS transition (0.05s)
-            vuNeedle.style.transform = `translateX(-50%) rotate(${angle}deg)`;
+            if (currentNeedleAngle < targetNeedleAngle) {
+                // Attack: Fast rise
+                currentNeedleAngle += (targetNeedleAngle - currentNeedleAngle) * attackSpeed;
+            } else {
+                // Decay: Slow fall
+                currentNeedleAngle += (targetNeedleAngle - currentNeedleAngle) * decaySpeed;
+            }
 
-            // Optional: Change color based on level
-            if (level > 0.9) {  // >-6dB (red zone)
+            // Apply transform
+            vuNeedle.style.transform = `translateX(-50%) rotate(${currentNeedleAngle}deg)`;
+
+            // Update needle color based on level
+            const normalizedLevel = (currentNeedleAngle + 45) / 90;  // Convert angle back to 0-1
+            if (normalizedLevel > 0.9) {  // >-6dB (red zone)
                 vuNeedle.style.background = 'linear-gradient(180deg, #ff6666 0%, #ff4444 100%)';
                 vuNeedle.style.boxShadow = '0 0 8px rgba(255, 102, 102, 0.8), 0 0 4px rgba(255, 68, 68, 0.6)';
-            } else if (level > 0.75) {  // >-15dB (yellow zone)
+            } else if (normalizedLevel > 0.75) {  // >-15dB (yellow zone)
                 vuNeedle.style.background = 'linear-gradient(180deg, #ffcc66 0%, #ffaa44 100%)';
                 vuNeedle.style.boxShadow = '0 0 8px rgba(255, 204, 102, 0.8), 0 0 4px rgba(255, 170, 68, 0.6)';
             } else {  // Normal (brass)
                 vuNeedle.style.background = 'linear-gradient(180deg, #d4a574 0%, #c49564 100%)';
                 vuNeedle.style.boxShadow = '0 0 8px rgba(212, 165, 116, 0.8), 0 0 4px rgba(212, 165, 116, 0.6)';
             }
+
+            // Continue animation loop
+            requestAnimationFrame(animateVUMeter);
         }
+
+        // Start animation loop
+        animateVUMeter();
+
+        // Register event listener on JUCE backend (REQUIRED for VU meter to work)
+        window.__JUCE__.backend.addEventListener("updateVUMeter", (dbLevel) => {
+            updateVUMeter(dbLevel);
+        });
 
         // ----------------------------------------------------------------
         // INITIALIZE UI FROM CURRENT PARAMETER VALUES
@@ -910,7 +933,7 @@
         updateKnobVisual(ageRotatable, ageState.getNormalisedValue());
         updateKnobVisual(driveRotatable, driveState.getNormalisedValue());
         updateKnobVisual(toneRotatable, toneState.getNormalisedValue());
-        updateToggleVisual(modModeState.getValue() >= 0.5);
+        updateToggleVisual(modModeState.getValue());  // getValue() returns boolean directly
 
         console.log('FlutterVerb UI loaded - all parameters bound to JUCE');
     </script>

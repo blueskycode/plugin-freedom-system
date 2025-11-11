@@ -156,12 +156,19 @@ void FlutterVerbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
     auto* modModeParam = parameters.getRawParameterValue("MOD_MODE");
     bool wetDryMode = modModeParam->load() > 0.5f;  // 0=WET_ONLY, 1=WET_DRY
 
-    // Configure reverb parameters
+    // Configure reverb parameters with true SIZE/DECAY independence
     juce::Reverb::Parameters reverbParams;
-    reverbParams.roomSize = sizeValue;
 
-    // Fix 1: Decay independence - map decay to damping, decoupled from roomSize
-    // Lower damping = longer decay time (inverse relationship maintained)
+    // Map SIZE to base room size: 0-100% → 0.2-0.6 (ensures minimum space for reverb)
+    float baseRoomSize = 0.2f + (sizeValue * 0.4f);
+
+    // Map DECAY to multiplier: 0.1-10s → 0.5-2.0x (scales effective room size for tail length)
+    float decayMultiplier = juce::jmap(decayValue, 0.1f, 10.0f, 0.5f, 2.0f);
+
+    // Combine: roomSize affected by both SIZE and DECAY, clamped to valid range
+    reverbParams.roomSize = juce::jlimit(0.1f, 1.0f, baseRoomSize * decayMultiplier);
+
+    // Keep damping for frequency-dependent absorption (complementary control)
     reverbParams.damping = juce::jmap(decayValue, 0.1f, 10.0f, 0.95f, 0.05f);
 
     reverbParams.width = 1.0f;         // Full stereo
@@ -243,99 +250,107 @@ void FlutterVerbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
         }
     };
 
-    // Phase 4.4: MOD_MODE Routing
-    // Mode 1 (WET+DRY): Apply modulation BEFORE reverb (affects both dry and wet paths)
+    // Define DRIVE processing lambda for reusability
+    auto applyDrive = [&]() {
+        if (driveValue > 0.0f)  // Only apply if DRIVE > 0
+        {
+            // Calculate gain: 1.0 at DRIVE=0%, 10.0 at DRIVE=100%
+            float gain = 1.0f + (driveValue * 9.0f);
+
+            const int numChannels = buffer.getNumChannels();
+            const int numSamples = buffer.getNumSamples();
+
+            for (int channel = 0; channel < numChannels; ++channel)
+            {
+                auto* channelData = buffer.getWritePointer(channel);
+
+                for (int sample = 0; sample < numSamples; ++sample)
+                {
+                    // Apply tanh saturation
+                    channelData[sample] = std::tanh(gain * channelData[sample]);
+                }
+            }
+        }
+    };
+
+    // Define TONE filter lambda for reusability
+    auto applyToneFilter = [&]() {
+        if (std::abs(toneValue) > 0.5f)  // Bypass zone: |TONE| <= 0.5%
+        {
+            float sampleRate = static_cast<float>(currentSampleRate);
+            bool isLowPass = (toneValue < 0.0f);
+
+            // Determine filter type and reset state if type changed
+            FilterType newFilterType = isLowPass ? FilterType::LowPass : FilterType::HighPass;
+            if (newFilterType != currentFilterType)
+            {
+                toneFilter.reset();  // Prevent burst artifacts on type transition
+                currentFilterType = newFilterType;
+            }
+
+            if (isLowPass)
+            {
+                // Low-pass filter (negative values: -100% to 0%)
+                // Exponential mapping: 200Hz (extreme) to 20kHz (center)
+                float normalizedValue = std::abs(toneValue) / 100.0f;  // 0.0 to 1.0
+                float cutoffHz = 20000.0f * std::pow(10.0f, -normalizedValue * std::log10(100.0f));
+                cutoffHz = juce::jlimit(200.0f, 20000.0f, cutoffHz);
+
+                *toneFilter.state = *juce::dsp::IIR::Coefficients<float>::makeLowPass(
+                    sampleRate, cutoffHz, 0.707f  // Q = 0.707 (Butterworth)
+                );
+            }
+            else
+            {
+                // High-pass filter (positive values: 0% to +100%)
+                // Exponential mapping: 20Hz (center) to 10kHz (extreme)
+                float normalizedValue = toneValue / 100.0f;  // 0.0 to 1.0
+                float cutoffHz = 20.0f * std::pow(10.0f, normalizedValue * std::log10(500.0f));
+                cutoffHz = juce::jlimit(20.0f, 10000.0f, cutoffHz);
+
+                *toneFilter.state = *juce::dsp::IIR::Coefficients<float>::makeHighPass(
+                    sampleRate, cutoffHz, 0.707f  // Q = 0.707 (Butterworth)
+                );
+            }
+
+            // Process buffer through filter
+            juce::dsp::AudioBlock<float> filterBlock(buffer);
+            juce::dsp::ProcessContextReplacing<float> filterContext(filterBlock);
+            toneFilter.process(filterContext);
+        }
+        else
+        {
+            // Reset filter state when entering bypass zone
+            if (currentFilterType != FilterType::None)
+            {
+                toneFilter.reset();
+                currentFilterType = FilterType::None;
+            }
+        }
+    };
+
+    // Phase 4.4: MOD_MODE Routing with correct DRIVE/TONE positioning
     if (wetDryMode)
     {
-        applyModulation();
+        // Mode 1 (WET+DRY): Apply effects BEFORE split (affects both paths)
+        applyModulation();  // Modulation first
+        applyDrive();       // Then saturation
+        applyToneFilter();  // Then filter - all affect both dry and wet
     }
 
-    // Push dry samples (may or may not be modulated depending on MOD_MODE)
+    // Push dry samples (processed in Mode 1, clean in Mode 0)
     dryWetMixer.pushDrySamples(block);
 
     // Process reverb using modern DSP API
     juce::dsp::ProcessContextReplacing<float> context(block);
     reverb.process(context);
 
-    // Mode 0 (WET ONLY): Apply modulation AFTER reverb (affects only wet path)
     if (!wetDryMode)
     {
-        applyModulation();
-    }
-
-    // Phase 4.3: Apply tape saturation (after modulation, before filter)
-    if (driveValue > 0.0f)  // Only apply if DRIVE > 0
-    {
-        // Calculate gain: 1.0 at DRIVE=0%, 10.0 at DRIVE=100%
-        float gain = 1.0f + (driveValue * 9.0f);
-
-        const int numChannels = buffer.getNumChannels();
-        const int numSamples = buffer.getNumSamples();
-
-        for (int channel = 0; channel < numChannels; ++channel)
-        {
-            auto* channelData = buffer.getWritePointer(channel);
-
-            for (int sample = 0; sample < numSamples; ++sample)
-            {
-                // Apply tanh saturation
-                channelData[sample] = std::tanh(gain * channelData[sample]);
-            }
-        }
-    }
-
-    // Phase 4.3: Apply DJ-style filter (after saturation, before dry/wet mixer)
-    if (std::abs(toneValue) > 0.5f)  // Bypass zone: |TONE| <= 0.5%
-    {
-        float sampleRate = static_cast<float>(currentSampleRate);
-        bool isLowPass = (toneValue < 0.0f);
-
-        // Determine filter type and reset state if type changed
-        FilterType newFilterType = isLowPass ? FilterType::LowPass : FilterType::HighPass;
-        if (newFilterType != currentFilterType)
-        {
-            toneFilter.reset();  // Prevent burst artifacts on type transition
-            currentFilterType = newFilterType;
-        }
-
-        if (isLowPass)
-        {
-            // Low-pass filter (negative values: -100% to 0%)
-            // Exponential mapping: 200Hz (extreme) to 20kHz (center)
-            float normalizedValue = std::abs(toneValue) / 100.0f;  // 0.0 to 1.0
-            float cutoffHz = 20000.0f * std::pow(10.0f, -normalizedValue * std::log10(100.0f));
-            cutoffHz = juce::jlimit(200.0f, 20000.0f, cutoffHz);
-
-            *toneFilter.state = *juce::dsp::IIR::Coefficients<float>::makeLowPass(
-                sampleRate, cutoffHz, 0.707f  // Q = 0.707 (Butterworth)
-            );
-        }
-        else
-        {
-            // High-pass filter (positive values: 0% to +100%)
-            // Exponential mapping: 20Hz (center) to 10kHz (extreme)
-            float normalizedValue = toneValue / 100.0f;  // 0.0 to 1.0
-            float cutoffHz = 20.0f * std::pow(10.0f, normalizedValue * std::log10(500.0f));
-            cutoffHz = juce::jlimit(20.0f, 10000.0f, cutoffHz);
-
-            *toneFilter.state = *juce::dsp::IIR::Coefficients<float>::makeHighPass(
-                sampleRate, cutoffHz, 0.707f  // Q = 0.707 (Butterworth)
-            );
-        }
-
-        // Process buffer through filter
-        juce::dsp::AudioBlock<float> filterBlock(buffer);
-        juce::dsp::ProcessContextReplacing<float> filterContext(filterBlock);
-        toneFilter.process(filterContext);
-    }
-    else
-    {
-        // Reset filter state when entering bypass zone
-        if (currentFilterType != FilterType::None)
-        {
-            toneFilter.reset();
-            currentFilterType = FilterType::None;
-        }
+        // Mode 0 (WET ONLY): Apply effects AFTER reverb (affects only wet path)
+        applyModulation();  // Modulation on wet only
+        applyDrive();       // Saturation on wet only
+        applyToneFilter();  // Filter on wet only
     }
 
     // Mix dry and wet samples
