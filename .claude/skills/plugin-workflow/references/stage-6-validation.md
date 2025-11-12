@@ -147,15 +147,28 @@ Add final fields to entry:
 
 Add timeline entry: `updatePluginTimeline(pluginName, 6, "Validation complete")`.
 
-6. Delete .continue-here.md:
+6. **CRITICAL: Delete .continue-here.md handoff file**
+
+**Purpose:** Remove workflow state when plugin is complete. Prevents stale handoff pollution.
 
 Call `deleteHandoff(pluginName)`:
 
 ```bash
-rm plugins/[PluginName]/.continue-here.md
+# MANDATORY cleanup at workflow completion
+HANDOFF_FILE="plugins/${PLUGIN_NAME}/.continue-here.md"
+
+if [ -f "$HANDOFF_FILE" ]; then
+  rm "$HANDOFF_FILE"
+  echo "✓ Handoff file deleted (workflow complete)"
+else
+  echo "⚠️  Handoff file already deleted"
+fi
 ```
 
-Workflow is complete, no need for handoff file.
+**Enforcement:** This step is MANDATORY. If handoff file is not deleted:
+- Future /continue commands will attempt to resume completed workflow
+- verifyStateIntegrity() will detect stale handoff and auto-cleanup
+- PLUGINS.md will show plugin as complete but handoff suggests in-progress
 
 **Git commit:**
 
@@ -166,7 +179,7 @@ This commits:
 - `plugins/[PluginName]/CHANGELOG.md`
 - `PLUGINS.md`
 
-Note: `.continue-here.md` is deleted and NOT committed (workflow complete).
+**IMPORTANT:** The `.continue-here.md` file is deleted BEFORE commit, so it will NOT be in the commit. The deletion itself is the state change (handoff → no handoff = workflow complete).
 
 7. Auto-install plugin:
 

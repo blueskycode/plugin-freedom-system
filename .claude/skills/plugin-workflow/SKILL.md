@@ -212,7 +212,25 @@ This orchestrator MUST NEVER implement plugin code directly. ALL stages 2-5 MUST
 
 ### Implementation
 
-1. **Determine current stage:**
+1. **Verify state integrity BEFORE dispatch:**
+
+```bash
+# CRITICAL: Verify state consistency before proceeding
+# Prevents corruption from non-atomic commits or contract tampering
+bash -c "$(cat references/state-management.md | grep -A100 'verifyStateIntegrity')"
+```
+
+See `references/state-management.md` for `verifyStateIntegrity()` function.
+
+**What it checks:**
+- Handoff file exists (exit 1 if missing)
+- Stage consistency between .continue-here.md and PLUGINS.md (exit 2 if mismatch)
+- Contract checksums match (exit 3 if tampered)
+- No stale handoffs from completed plugins (exit 4, auto-cleanup)
+
+If verification fails, BLOCK dispatch and guide user to resolution (/reconcile, restore contracts, etc.)
+
+2. **Determine current stage:**
 
 ```bash
 # Check if handoff file exists (resuming)
@@ -227,22 +245,23 @@ else
 fi
 ```
 
-2. **Verify preconditions for target stage:**
+3. **Verify preconditions for target stage:**
 
 See `references/state-management.md` for `checkStagePreconditions()` function.
 
 <dispatcher_pattern>
   The orchestrator routes stages to subagents using this logic:
 
-  1. Check preconditions → If failed, BLOCK with reason
-  2. Route to subagent based on stage number:
+  1. Verify state integrity (verifyStateIntegrity) → BLOCK if corrupted
+  2. Check preconditions → If failed, BLOCK with reason
+  3. Route to subagent based on stage number:
      - Stage 2 → foundation-agent
      - Stage 3 → shell-agent
      - Stage 4 → dsp-agent
      - Stage 5 → gui-agent
      - Stage 6 → validator (or direct execution)
-  3. Pass contracts and Required Reading to subagent
-  4. Wait for subagent completion
+  4. Pass contracts and Required Reading to subagent
+  5. Wait for subagent completion
 
   See [references/dispatcher-pattern.md](references/dispatcher-pattern.md) for full pseudocode.
 </dispatcher_pattern>

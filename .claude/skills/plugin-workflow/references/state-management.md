@@ -294,18 +294,31 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
 **Implementation:**
-1. Stage changes atomically in single commit:
+
+**CRITICAL:** All state files must be updated and committed in a SINGLE ATOMIC OPERATION to prevent temporal drift windows.
+
+1. Update all state files BEFORE staging:
    ```bash
-   git add plugins/[PluginName]/Source/ (if exists)
-   git add plugins/[PluginName]/.ideas/ (contracts)
-   git add plugins/[PluginName]/.continue-here.md (handoff)
-   git add PLUGINS.md (state)
+   # Update .continue-here.md with new stage info
+   # Update PLUGINS.md with new status
+   # Update plan.md if phased implementation
    ```
 
-2. Commit with standardized message using heredoc:
+2. Stage ALL changes atomically (code + state files):
+   ```bash
+   git add plugins/[PluginName]/Source/ 2>/dev/null || true
+   git add plugins/[PluginName]/.ideas/
+   git add plugins/[PluginName]/.continue-here.md
+   git add plugins/[PluginName]/plan.md 2>/dev/null || true
+   git add PLUGINS.md
+   ```
+
+3. Create SINGLE atomic commit with all changes:
    ```bash
    git commit -m "$(cat <<'EOF'
    feat: [PluginName] Stage [N] - [description]
+
+   [ATOMIC] Code + state files committed together
 
    🤖 Generated with Claude Code
 
@@ -314,24 +327,26 @@ Co-Authored-By: Claude <noreply@anthropic.com>
    )"
    ```
 
-3. Verify commit succeeded:
+4. Verify commit succeeded:
    ```bash
    git log -1 --format='%h'
    ```
 
-4. Display commit hash to user:
+5. Display commit hash to user:
    ```
-   ✓ Committed: abc1234 - Stage [N] complete
+   ✓ Committed: abc1234 - Stage [N] complete (atomic)
    ```
 
-5. If commit fails:
-   - Warn user
-   - Suggest manual commit
+6. If commit fails:
+   - Rollback state file changes (restore from git)
+   - Warn user about inconsistency
+   - Suggest manual resolution
    - Continue workflow (don't block)
 
 **Atomic state transitions:**
-- PLUGINS.md update + handoff update + code changes = Single commit
-- If commit fails → Rollback state changes (or warn user about inconsistency)
+- PLUGINS.md + .continue-here.md + plan.md + code = SINGLE commit
+- NO temporal window between state updates
+- If commit fails → Rollback ALL state changes to maintain consistency
 
 **Commit variations by stage:**
 - Stage 0: `feat: [Plugin] Stage 0 - research complete`
@@ -375,7 +390,15 @@ Call at beginning of Stage 0.
 
 **Implementation:**
 1. Read handoff template from `.claude/skills/plugin-workflow/assets/continue-here-template.md`
-2. Fill in YAML frontmatter:
+2. Calculate contract checksums for tamper detection:
+   ```bash
+   # Calculate SHA256 checksums of contract files
+   BRIEF_SHA=$(shasum -a 256 plugins/$PLUGIN_NAME/.ideas/creative-brief.md | awk '{print $1}')
+   PARAM_SHA=$(shasum -a 256 plugins/$PLUGIN_NAME/.ideas/parameter-spec.md | awk '{print $1}')
+   ARCH_SHA=$(shasum -a 256 plugins/$PLUGIN_NAME/.ideas/architecture.md | awk '{print $1}')
+   PLAN_SHA=$(shasum -a 256 plugins/$PLUGIN_NAME/.ideas/plan.md | awk '{print $1}' 2>/dev/null || echo "null")
+   ```
+3. Fill in YAML frontmatter:
    - plugin: [pluginName]
    - stage: [stage number]
    - phase: null (only for complex plugins)
@@ -386,12 +409,17 @@ Call at beginning of Stage 0.
    - orchestration_mode: true (enable dispatcher pattern)
    - next_action: null (filled when stage/phase completes)
    - next_phase: null (filled for phased implementations)
-3. Fill in markdown sections with context:
+   - contract_checksums:
+     * creative_brief: sha256:[checksum]
+     * parameter_spec: sha256:[checksum]
+     * architecture: sha256:[checksum]
+     * plan: sha256:[checksum] (or null if doesn't exist yet)
+4. Fill in markdown sections with context:
    - Current State: "Stage [N] - [description]"
    - Completed So Far: [what's done]
    - Next Steps: [prioritized actions]
    - Context to Preserve: [key decisions, files, build status]
-4. Write to `plugins/[pluginName]/.continue-here.md`
+5. Write to `plugins/[pluginName]/.continue-here.md`
 
 ### updateHandoff(pluginName, stage, completed, nextSteps, complexityScore, phased, nextAction, nextPhase)
 
@@ -399,7 +427,15 @@ Call at beginning of Stage 0.
 
 **Implementation:**
 1. Read existing `plugins/[pluginName]/.continue-here.md`
-2. Update YAML frontmatter:
+2. Recalculate contract checksums to detect tampering:
+   ```bash
+   # Recalculate SHA256 checksums
+   BRIEF_SHA=$(shasum -a 256 plugins/$PLUGIN_NAME/.ideas/creative-brief.md | awk '{print $1}')
+   PARAM_SHA=$(shasum -a 256 plugins/$PLUGIN_NAME/.ideas/parameter-spec.md | awk '{print $1}')
+   ARCH_SHA=$(shasum -a 256 plugins/$PLUGIN_NAME/.ideas/architecture.md | awk '{print $1}')
+   PLAN_SHA=$(shasum -a 256 plugins/$PLUGIN_NAME/.ideas/plan.md | awk '{print $1}')
+   ```
+3. Update YAML frontmatter:
    - stage: [new stage number]
    - phase: [phase number if complex]
    - status: [in_progress | complete]
@@ -409,10 +445,15 @@ Call at beginning of Stage 0.
    - orchestration_mode: true (keep enabled for dispatcher pattern)
    - next_action: [e.g., "invoke_dsp_agent", "invoke_gui_agent"]
    - next_phase: [e.g., "4.4", "5.1"]
-3. Append to "Completed So Far" section
-4. Update "Next Steps" with new actions
-5. Update "Context to Preserve" with latest context
-6. Write back to file
+   - contract_checksums:
+     * creative_brief: sha256:[new_checksum]
+     * parameter_spec: sha256:[new_checksum]
+     * architecture: sha256:[new_checksum]
+     * plan: sha256:[new_checksum]
+4. Append to "Completed So Far" section
+5. Update "Next Steps" with new actions
+6. Update "Context to Preserve" with latest context
+7. Write back to file
 
 **Determining next_action:**
 - Stage 2 → "invoke_foundation_agent"
@@ -434,6 +475,124 @@ Call at beginning of Stage 0.
 **When to call:**
 - After Stage 6 complete (status → ✅ Working)
 - After plugin installation (status → 📦 Installed)
+
+### verifyStateIntegrity(pluginName)
+
+**Purpose:** Verify state consistency before dispatching to next stage. Prevents workflow resumption when state is corrupted or contracts have been tampered with.
+
+**Implementation:**
+```bash
+#!/bin/bash
+# State integrity verification before stage dispatch
+
+PLUGIN_NAME=$1
+HANDOFF_FILE="plugins/${PLUGIN_NAME}/.continue-here.md"
+
+# Check if handoff file exists
+if [ ! -f "$HANDOFF_FILE" ]; then
+  echo "❌ No handoff file found for ${PLUGIN_NAME}"
+  echo "Run /plan ${PLUGIN_NAME} to start workflow"
+  exit 1
+fi
+
+# Extract current stage from handoff
+HANDOFF_STAGE=$(grep "^stage:" "$HANDOFF_FILE" | awk '{print $2}')
+
+# Extract status from PLUGINS.md
+PLUGINS_STATUS=$(grep -A1 "^### ${PLUGIN_NAME}$" PLUGINS.md | grep "^**Status:**" | sed 's/.*Stage \([0-9]\+\).*/\1/')
+
+# Verify stage consistency between handoff and PLUGINS.md
+if [ "$HANDOFF_STAGE" != "$PLUGINS_STATUS" ]; then
+  echo "❌ State mismatch detected:"
+  echo "   .continue-here.md: Stage ${HANDOFF_STAGE}"
+  echo "   PLUGINS.md: Stage ${PLUGINS_STATUS}"
+  echo ""
+  echo "Run /reconcile ${PLUGIN_NAME} to fix inconsistency"
+  exit 2
+fi
+
+# Verify contract checksums (detect tampering)
+echo "Verifying contract integrity..."
+
+# Extract stored checksums from handoff
+STORED_BRIEF=$(grep "creative_brief:" "$HANDOFF_FILE" | awk '{print $2}')
+STORED_PARAM=$(grep "parameter_spec:" "$HANDOFF_FILE" | awk '{print $2}')
+STORED_ARCH=$(grep "architecture:" "$HANDOFF_FILE" | awk '{print $2}')
+STORED_PLAN=$(grep "plan:" "$HANDOFF_FILE" | awk '{print $2}')
+
+# Calculate current checksums
+CURRENT_BRIEF="sha256:$(shasum -a 256 plugins/${PLUGIN_NAME}/.ideas/creative-brief.md | awk '{print $1}')"
+CURRENT_PARAM="sha256:$(shasum -a 256 plugins/${PLUGIN_NAME}/.ideas/parameter-spec.md | awk '{print $1}')"
+CURRENT_ARCH="sha256:$(shasum -a 256 plugins/${PLUGIN_NAME}/.ideas/architecture.md | awk '{print $1}')"
+CURRENT_PLAN="sha256:$(shasum -a 256 plugins/${PLUGIN_NAME}/.ideas/plan.md | awk '{print $1}')"
+
+# Compare checksums
+TAMPERED=false
+
+if [ "$STORED_BRIEF" != "$CURRENT_BRIEF" ] && [ "$STORED_BRIEF" != "null" ]; then
+  echo "⚠️  creative-brief.md has been modified"
+  TAMPERED=true
+fi
+
+if [ "$STORED_PARAM" != "$CURRENT_PARAM" ] && [ "$STORED_PARAM" != "null" ]; then
+  echo "⚠️  parameter-spec.md has been modified"
+  TAMPERED=true
+fi
+
+if [ "$STORED_ARCH" != "$CURRENT_ARCH" ] && [ "$STORED_ARCH" != "null" ]; then
+  echo "⚠️  architecture.md has been modified"
+  TAMPERED=true
+fi
+
+if [ "$STORED_PLAN" != "$CURRENT_PLAN" ] && [ "$STORED_PLAN" != "null" ]; then
+  echo "⚠️  plan.md has been modified"
+  TAMPERED=true
+fi
+
+if [ "$TAMPERED" = true ]; then
+  echo ""
+  echo "⚠️  CONTRACT DRIFT DETECTED"
+  echo "Contracts have been modified since last checkpoint."
+  echo "This violates immutability principle - contracts must not change during implementation."
+  echo ""
+  echo "Options:"
+  echo "1. Restore contracts from git (recommended)"
+  echo "2. Update checksums and proceed (if changes were intentional)"
+  echo "3. Use /improve instead of /continue (for post-completion changes)"
+  exit 3
+fi
+
+# Check for stale handoffs from completed plugins
+if grep -q "status: workflow_complete" "$HANDOFF_FILE"; then
+  PLUGIN_STATUS=$(grep -A1 "^### ${PLUGIN_NAME}$" PLUGINS.md | grep "^**Status:**")
+
+  if echo "$PLUGIN_STATUS" | grep -q "Working\|Installed"; then
+    echo "⚠️  STALE HANDOFF DETECTED"
+    echo "${PLUGIN_NAME} is marked as complete in PLUGINS.md but handoff file still exists."
+    echo "This handoff should have been deleted at Stage 6 completion."
+    echo ""
+    echo "Cleaning up stale handoff..."
+    rm "$HANDOFF_FILE"
+    echo "✓ Handoff file deleted"
+    exit 4
+  fi
+fi
+
+echo "✓ State integrity verified"
+exit 0
+```
+
+**When to call:**
+- BEFORE dispatching to any stage (2-6)
+- At workflow resume (/continue command)
+- After manual code changes (user says "resume automation")
+
+**Error codes:**
+- Exit 0: All checks passed, safe to proceed
+- Exit 1: Missing handoff file (run /plan first)
+- Exit 2: State mismatch between .continue-here.md and PLUGINS.md (run /reconcile)
+- Exit 3: Contract tampering detected (restore or update checksums)
+- Exit 4: Stale handoff cleaned up (workflow already complete)
 
 ## Checkpoint Types
 
@@ -514,38 +673,39 @@ If user paused and says "resume automation" or chooses to continue:
     </action>
 
     <action order="3" actor="orchestrator" required="true">
-      Auto-commit changes:
-      ```bash
-      git add plugins/[PluginName]/Source/
-      git add plugins/[PluginName]/.ideas/
-      git add plugins/[PluginName]/.continue-here.md
-      git add PLUGINS.md
-      git commit -m "feat: [Plugin] Stage [N] - [description]"
-      ```
-      IF commit fails: Warn user, continue anyway (non-blocking)
+      Update state files:
+      - Update .continue-here.md:
+        * stage: [new stage number]
+        * phase: [phase number if complex]
+        * last_updated: [timestamp]
+        * next_action: [which subagent to invoke next]
+        * next_phase: [phase number if phased implementation]
+      - Update PLUGINS.md:
+        * Status: 🚧 Stage [N]
+        * Last Updated: [date]
+        * Lifecycle Timeline: Append new entry
     </action>
 
     <action order="4" actor="orchestrator" required="true">
-      Update .continue-here.md:
-      - stage: [new stage number]
-      - phase: [phase number if complex]
-      - last_updated: [timestamp]
-      - next_action: [which subagent to invoke next]
-      - next_phase: [phase number if phased implementation]
+      ATOMIC commit (single operation for code + state):
+      ```bash
+      git add plugins/[PluginName]/Source/ 2>/dev/null || true
+      git add plugins/[PluginName]/.ideas/
+      git add plugins/[PluginName]/.continue-here.md
+      git add plugins/[PluginName]/plan.md 2>/dev/null || true
+      git add PLUGINS.md
+      git commit -m "feat: [Plugin] Stage [N] - [description]
+
+[ATOMIC] Code + state files committed together"
+      ```
+      IF commit fails: Rollback state changes, warn user, continue (non-blocking)
     </action>
 
-    <action order="5" actor="orchestrator" required="true">
-      Update PLUGINS.md:
-      - Status: 🚧 Stage [N]
-      - Last Updated: [date]
-      - Lifecycle Timeline: Append new entry
-    </action>
-
-    <action order="6" actor="orchestrator" required="true" blocking="true">
+    <action order="5" actor="orchestrator" required="true" blocking="true">
       Present decision menu with context-appropriate options
     </action>
 
-    <action order="7" actor="orchestrator" required="true" blocking="true">
+    <action order="6" actor="orchestrator" required="true" blocking="true">
       WAIT for user response - NEVER auto-proceed
     </action>
   </sequence>
