@@ -18,16 +18,18 @@ preconditions:
 
 **Integration with deep-research:**
 
-This skill can receive pre-computed research findings from the deep-research skill. When user runs `/research` to investigate a problem and then chooses "Apply solution", deep-research outputs a routing instruction that signals the main conversation to invoke this skill. Phase 0.45 detects the research findings in conversation history and skips investigation, proceeding directly to implementation approval.
+This skill can receive pre-computed research findings from the deep-research skill. When user runs `/research` to investigate a problem and then chooses "Apply solution", deep-research outputs a directive that the main conversation (orchestrator) recognizes and acts on by invoking this skill. Phase 0.45 detects the research findings in conversation history and skips investigation, proceeding directly to implementation approval.
 
 **Workflow:**
 1. User: `/research [problem]` → deep-research investigates
 2. deep-research: Presents findings with "Apply solution" option
 3. User: Selects "Apply solution"
-4. deep-research: Outputs routing instruction: "Invoking plugin-improve skill..."
-5. Main conversation: Sees routing instruction, invokes plugin-improve skill
+4. deep-research: Outputs directive: "Next step: Invoke plugin-improve skill."
+5. Main conversation (orchestrator): Sees directive, uses Skill tool to invoke plugin-improve
 6. plugin-improve: Detects research in history (Phase 0.45), extracts findings, skips investigation
 7. plugin-improve: Implements with versioning, backups, testing
+
+**Note:** This is the standard handoff protocol. When the orchestrator sees "Invoke plugin-improve skill" in deep-research output, it will automatically invoke this skill. The routing is explicit and always executed.
 
 ## Precondition Checking
 
@@ -172,7 +174,7 @@ Route based on answer:
 
 **Scan recent messages for:**
 
-- Routing instruction: "Invoking plugin-improve skill..." (signals deep-research handoff)
+- Routing directive: "Invoke plugin-improve skill" (signals deep-research handoff)
 - Messages from deep-research skill
 - Research reports (Level 1/2/3)
 - Problem analysis and root cause
@@ -205,7 +207,7 @@ Proceed to Phase 0.5 (Investigation) - perform fresh root cause analysis.
 - Avoids duplicate investigation (user already ran /research)
 - Preserves expensive research context (Opus + extended thinking)
 - Maintains separation: research finds solutions, improve implements them
-- Clear handoff: research outputs routing instruction → main conversation invokes improve
+- Clear handoff: research outputs directive → orchestrator invokes improve (always executed)
 
 ## Phase 0.5: Investigation (3-Tier)
 

@@ -42,10 +42,12 @@ Most problems have known solutions (Level 1: 5 min). Complex problems need deep 
 
 1. Research completes and presents findings with decision menu
 2. User selects "Apply solution"
-3. Output routing instruction: "User selected: Apply solution. Invoking plugin-improve skill..."
-4. This signals main conversation to invoke plugin-improve
+3. Output routing instruction: "User selected: Apply solution. Next step: Invoke plugin-improve skill."
+4. Main conversation (orchestrator) sees routing instruction and invokes plugin-improve skill
 5. plugin-improve reads research findings from conversation history
 6. plugin-improve handles all implementation (with versioning, backups, testing)
+
+**Note:** The routing instruction is a directive to the main conversation. When the orchestrator sees "Invoke plugin-improve skill", it will use the Skill tool to invoke plugin-improve. This is the standard handoff protocol.
 
 **Why separation matters:**
 
@@ -591,8 +593,8 @@ What's next?
 **Handle responses:**
 
 - **Option 1 ("Apply solution"):**
-  Output: "User selected: Apply solution. Invoking plugin-improve skill..."
-  This routing instruction signals main conversation to invoke plugin-improve, which reads research findings from history and skips Phase 0.5 investigation.
+  Output: "User selected: Apply solution. Next step: Invoke plugin-improve skill."
+  The orchestrator will see this directive and invoke plugin-improve, which reads research findings from history and skips Phase 0.5 investigation.
 - **Option 2:** Display full report, then re-present menu
 - **Option 3:** Escalate to Level 2
 - **Option 4:** Ask what they'd like to do
@@ -612,8 +614,8 @@ What's next?
 **Handle responses:**
 
 - **Option 1 ("Apply recommended solution"):**
-  Output: "User selected: Apply recommended solution. Invoking plugin-improve skill..."
-  This routing instruction signals main conversation to invoke plugin-improve, which reads research findings from history.
+  Output: "User selected: Apply recommended solution. Next step: Invoke plugin-improve skill."
+  The orchestrator will see this directive and invoke plugin-improve, which reads research findings from history.
 - **Option 2:** Display detailed comparison, then re-present menu
 - **Option 3:** Escalate to Level 3
 - **Option 4:** Ask what they'd like to do
@@ -632,10 +634,10 @@ What's next?
 **Handle responses:**
 
 - **Option 1 ("Apply recommended solution"):**
-  Output: "User selected: Apply recommended solution. Invoking plugin-improve skill..."
-  This routing instruction signals main conversation to invoke plugin-improve, which reads research findings from history and proceeds to implementation.
+  Output: "User selected: Apply recommended solution. Next step: Invoke plugin-improve skill."
+  The orchestrator will see this directive and invoke plugin-improve, which reads research findings from history and proceeds to implementation.
 - **Option 2:** Display comprehensive report with all approaches, then re-present menu
-- **Option 3:** User wants to try different approach - update recommendation, then output routing instruction to invoke plugin-improve with alternative approach
+- **Option 3:** User wants to try different approach - update recommendation to highlight alternative, then output: "Next step: Invoke plugin-improve skill with alternative approach."
 - **Option 4:** Invoke troubleshooting-docs skill to capture findings in knowledge base (for future Level 1 fast path)
 - **Option 5:** Ask what they'd like to do
 
