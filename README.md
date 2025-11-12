@@ -200,7 +200,7 @@ All other dependencies (Xcode Command Line Tools, JUCE, CMake, Python, pluginval
 # 3. Build it
 /implement
 
-# Automated 7-stage workflow handles all technical implementation
+# Automated workflow builds the plugin (Stages 2-6)
 # Takes 5-15 minutes depending on complexity
 
 # 4. Install and test
