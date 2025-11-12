@@ -115,12 +115,14 @@ void DriveVerbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juc
     auto* dryWetParam = parameters.getRawParameterValue("dryWet");
     auto* driveParam = parameters.getRawParameterValue("drive");
     auto* filterParam = parameters.getRawParameterValue("filter");
+    auto* filterPositionParam = parameters.getRawParameterValue("filterPosition");
 
     float sizeValue = sizeParam->load();      // 0-100%
     float decayValue = decayParam->load();    // 0.5-10s
     float dryWetValue = dryWetParam->load();  // 0-100%
     float driveValue = driveParam->load();    // 0-24dB
     float filterValue = filterParam->load();  // -100% to +100%
+    bool isPostMode = filterPositionParam->load() > 0.5f;  // false=PRE, true=POST
 
     // Update reverb parameters
     juce::dsp::Reverb::Parameters reverbParams;
@@ -151,6 +153,29 @@ void DriveVerbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juc
     // Process reverb
     reverb.process(context);
 
+    // Stage 4.4: PRE/POST routing - apply drive and filter in different orders
+    // PRE mode (filterPosition=0.0): Filter → Drive
+    // POST mode (filterPosition=1.0): Drive → Filter
+
+    if (isPostMode)
+    {
+        // POST MODE: Drive → Filter (drive affects harmonics, then filter shapes them)
+        applyDrive(block, context, driveValue);
+        applyFilter(block, context, filterValue);
+    }
+    else
+    {
+        // PRE MODE: Filter → Drive (filter shapes frequency content, then drive adds harmonics)
+        applyFilter(block, context, filterValue);
+        applyDrive(block, context, driveValue);
+    }
+
+    // Mix dry and wet signals
+    dryWetMixer.mixWetSamples(block);
+}
+
+void DriveVerbAudioProcessor::applyDrive(juce::dsp::AudioBlock<float>& block, juce::dsp::ProcessContextReplacing<float>& context, float driveValue)
+{
     // Apply drive to wet signal (Stage 4.2)
     // Convert dB to linear gain: gain = 10^(dB/20)
     float driveGain = std::pow(10.0f, driveValue / 20.0f);
@@ -167,7 +192,10 @@ void DriveVerbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juc
 
     // Apply tanh waveshaping (tape-like saturation)
     driveShaper.process(context);
+}
 
+void DriveVerbAudioProcessor::applyFilter(juce::dsp::AudioBlock<float>& block, juce::dsp::ProcessContextReplacing<float>& context, float filterValue)
+{
     // Apply DJ-style filter (Stage 4.3)
     // Center bypass zone: ±0.5% = no filtering (prevents filter artifacts at bypass)
     if (std::abs(filterValue) > 0.5f)
@@ -219,9 +247,6 @@ void DriveVerbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juc
             previousWasLowPass = false;
         }
     }
-
-    // Mix dry and wet signals
-    dryWetMixer.mixWetSamples(block);
 }
 
 juce::AudioProcessorEditor* DriveVerbAudioProcessor::createEditor()

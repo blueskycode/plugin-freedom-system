@@ -47,5 +47,9 @@ private:
     juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, juce::dsp::IIR::Coefficients<float>> filterProcessor;
     bool previousWasLowPass = false;  // Track filter type transitions
 
+    // Stage 4.4: Helper methods for PRE/POST routing
+    void applyDrive(juce::dsp::AudioBlock<float>& block, juce::dsp::ProcessContextReplacing<float>& context, float driveValue);
+    void applyFilter(juce::dsp::AudioBlock<float>& block, juce::dsp::ProcessContextReplacing<float>& context, float filterValue);
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DriveVerbAudioProcessor)
 };
