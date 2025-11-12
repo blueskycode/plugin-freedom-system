@@ -17,42 +17,58 @@ DO NOT manually read handoff files or present summaries. The context-resume skil
 
 ## Behavior
 
-**Without plugin name:**
-Search for all `.continue-here.md` handoff files in:
-- `plugins/[Name]/.continue-here.md` (implementation)
-- `plugins/[Name]/.ideas/.continue-here.md` (ideation/mockup)
+<preconditions enforcement="blocking">
+  <check target="handoff_files" condition="at_least_one_exists">
+    Search for `.continue-here.md` files in priority order:
 
-Present interactive menu:
-```
-Which plugin would you like to resume?
+    **Without plugin name:**
+    1. `plugins/[Name]/.continue-here.md` (implementation)
+    2. `plugins/[Name]/.ideas/.continue-here.md` (ideation/mockup)
 
-1. [PluginName1]
-   Stage [N] ([StageName]) • Active development • [time] ago
+    Present interactive menu if multiple found:
+    ```
+    Which plugin would you like to resume?
 
-2. [PluginName2]
-   Mockup v[N] ready • Ready to build • [time] ago
+    1. [PluginName1]
+       Stage [N] ([StageName]) • Active development • [time] ago
 
-3. [PluginName3]
-   Creative brief complete • Not started • [time] ago
-```
+    2. [PluginName2]
+       Mockup v[N] ready • Ready to build • [time] ago
 
-**With plugin name:**
-Load handoff file for specific plugin directly.
+    3. [PluginName3]
+       Creative brief complete • Not started • [time] ago
+    ```
 
-## Handoff File Locations
+    **With plugin name:**
+    Load directly: `plugins/[PluginName]/.continue-here.md`
 
-Universal handoff system searches:
-- **Implementation:** `plugins/[Name]/.continue-here.md`
-- **Ideation/Mockup:** `plugins/[Name]/.ideas/.continue-here.md`
+    IF none found: See Error Handling section below.
+  </check>
+</preconditions>
 
-## What Gets Loaded
+## State Contract
 
-Context automatically loaded:
-- Handoff file content (current state, completed work, next steps)
-- Recent commits for this plugin
-- Source files mentioned in handoff
-- Research notes (if Stage 0-1)
-- UI mockups (if applicable)
+<state_contract>
+  <reads>
+    - `.continue-here.md` (one of 3 locations by priority)
+    - PLUGINS.md (status verification)
+    - Recent git commits (for plugin only)
+    - Contract files (if workflow stage 0-1)
+    - Source files (if mentioned in handoff)
+    - Research notes (if Stage 0-1)
+    - UI mockups (if applicable)
+  </reads>
+
+  <writes>
+    NONE - This command is READ-ONLY for state files.
+    Continuation skills handle all state updates.
+  </writes>
+
+  <loads_before_routing>
+    Load contracts and context files BEFORE invoking continuation skill.
+    This provides full context for skill execution.
+  </loads_before_routing>
+</state_contract>
 
 ## After Loading
 
@@ -80,34 +96,19 @@ Wait for confirmation, then resume workflow at exact continuation point.
 
 ## Error Handling
 
-**No handoff files exist:**
-```
-No resumable work found.
+**No handoff files found:**
 
-Handoff files are created throughout the plugin lifecycle:
-- After ideation (creative brief complete)
-- After mockup creation (design ready)
-- During implementation (plugin-workflow stages)
-- After improvements (version releases)
+IF no handoff exists for any plugin:
+- Display: "No resumable work found"
+- Explain: Handoffs created after ideation, mockup, during implementation, or after improvements
+- Suggest: `/dream` (explore ideas) or `/implement` (build new plugin)
 
-Start new work:
-- /dream - Explore plugin ideas
-- /implement - Build new plugin
-```
+IF specific [PluginName] doesn't have handoff:
+- Display: "[PluginName] doesn't have a handoff file"
+- Explain: Plugin may be complete (Stage 6), not started, or handoff removed
+- Suggest: Check `PLUGINS.md`, `/improve [PluginName]`, or `/implement [PluginName]`
 
-**Plugin doesn't have handoff:**
-```
-[PluginName] doesn't have a handoff file.
-
-Possible reasons:
-- Plugin is already complete (Stage 6 done)
-- Plugin hasn't been started yet
-- Development finished and handoff removed
-
-Check status: Look in PLUGINS.md
-Modify complete plugin: /improve [PluginName]
-Start new plugin: /implement [PluginName]
-```
+See `context-resume` skill's `error-recovery.md` for additional scenarios.
 
 ## Routes To
 

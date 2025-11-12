@@ -9,152 +9,103 @@ When user runs `/test [PluginName?] [mode?]`, invoke the plugin-testing skill or
 
 ## Preconditions
 
-**Check PLUGINS.md status:**
-- Plugin MUST exist
-- Status MUST NOT be 💡 Ideated (need implementation to test)
-
-**If status is 💡:**
-Reject with message:
-```
+<preconditions enforcement="blocking">
+  <check target="PLUGINS.md" condition="plugin_exists">
+    Plugin entry MUST exist in PLUGINS.md
+  </check>
+  <check target="PLUGINS.md::status" condition="not_equals(💡 Ideated)">
+    Status MUST NOT be 💡 Ideated (requires implementation to test)
+  </check>
+  <rejection_message status="💡 Ideated">
 [PluginName] is not implemented yet (Status: 💡 Ideated).
 Use /implement [PluginName] to build it first.
-```
+  </rejection_message>
+</preconditions>
+
+<state_interactions>
+  <reads>
+    - PLUGINS.md (plugin status, test capabilities)
+  </reads>
+  <writes>
+    - None (testing results logged to console, skills handle any state updates)
+  </writes>
+</state_interactions>
 
 ## Three Test Methods
 
-### 1. Automated Stability Tests
-**Command:** `/test [PluginName] automated`
+<routing_logic>
+  <mode name="automated" argument="automated">
+    <requirement path="plugins/{PluginName}/Tests/" type="directory" />
+    <routes_to skill="plugin-testing" />
+    <duration estimate="2 minutes" />
+    <tests>
+      - Parameter stability (all combinations, edge cases)
+      - State save/restore (preset corruption)
+      - Processing stability (buffer sizes, sample rates)
+      - Thread safety (concurrent access)
+      - Edge case handling (silence, extremes, denormals)
+    </tests>
+  </mode>
 
-**Requirements:** `plugins/[Plugin]/Tests/` directory must exist
+  <mode name="build" argument="build">
+    <requirement>Always available (no dependencies)</requirement>
+    <routes_to skill="build-automation" />
+    <duration estimate="5-10 minutes" />
+    <steps>
+      1. Build Release mode (VST3 + AU)
+      2. Run pluginval with strict settings (level 10)
+      3. Install to system folders
+      4. Clear DAW caches
+    </steps>
+  </mode>
 
-**Routes to:** plugin-testing skill
-
-**Duration:** ~2 minutes
-
-**Tests:**
-- Parameter stability (all combinations, edge cases)
-- State save/restore (preset corruption)
-- Processing stability (buffer sizes, sample rates)
-- Thread safety (concurrent access)
-- Edge case handling (silence, extremes, denormals)
-
-### 2. Build and Validate
-**Command:** `/test [PluginName] build`
-
-**Requirements:** None (always available)
-
-**Routes to:** build-automation skill
-
-**Duration:** ~5-10 minutes
-
-**Steps:**
-1. Build Release mode (VST3 + AU)
-2. Run pluginval with strict settings (level 10)
-3. Install to system folders
-4. Clear DAW caches
-
-### 3. Manual DAW Testing
-**Command:** `/test [PluginName] manual`
-
-**Requirements:** None
-
-**Routes to:** Display checklist directly (no skill)
-
-**Checklist includes:**
-- Load & initialize
-- Audio processing
-- Parameter testing
-- State management
-- Performance
-- Compatibility
-- Stress testing
+  <mode name="manual" argument="manual">
+    <requirement>Always available</requirement>
+    <routes_to>Display checklist directly (no skill invocation)</routes_to>
+    <checklist_items>
+      - Load & initialize
+      - Audio processing
+      - Parameter testing
+      - State management
+      - Performance
+      - Compatibility
+      - Stress testing
+    </checklist_items>
+  </mode>
+</routing_logic>
 
 ## Behavior
 
-**Without plugin name:**
-List available plugins with test status:
-```
-Which plugin would you like to test?
+<behavior>
+  <case arguments="none">
+    List available plugins with test status from PLUGINS.md
+  </case>
+  <case arguments="plugin_only">
+    Present test method decision menu (adapt based on Tests/ directory existence)
+  </case>
+  <case arguments="plugin_and_mode">
+    Execute test directly via appropriate skill
+  </case>
+</behavior>
 
-1. [PluginName1] v[X.Y.Z] - Has automated tests ✓
-2. [PluginName2] v[X.Y.Z] - Build validation only
-3. [PluginName3] v[X.Y.Z] - Has automated tests ✓
-```
+## Integration
 
-**With plugin, no mode:**
-Present test method options:
-```
-How would you like to test [PluginName]?
-
-1. Automated stability tests (2 min)
-   Run test suite - catches crashes, explosions, broken params
-
-2. Build and validate (5-10 min)
-   Compile Release build + run pluginval
-
-3. Manual DAW testing (guidance)
-   Show testing checklist for real-world validation
-```
-
-Options adapt based on what's available (automated only shown if Tests/ exists).
-
-**With plugin and mode:**
-Execute test directly.
-
-## Auto-Invoked During Workflow
-
-plugin-workflow auto-invokes testing:
-- After Stage 4 (DSP) completion
-- After Stage 5 (GUI) completion
-
-If tests fail, workflow stops until fixed.
+This command is also auto-invoked by plugin-workflow after Stage 4 (DSP) and Stage 5 (GUI).
 
 ## Error Handling
 
-**Automated tests fail:**
-```
-❌ [N] tests failed:
-  - [testName]: [Description]
-  - [testName]: [Description]
-
-Options:
-1. Investigate failures (triggers deep-research)
-2. Show me the test code
-3. Show full test output
-4. I'll fix it manually
-```
-
-**Build fails:**
-```
-Build error at [stage]:
-[Error output with context]
-
-Options:
-1. Investigate (triggers deep-research)
-2. Show me the code
-3. Show full output
-4. I'll fix it manually
-```
-
-**Pluginval fails:**
-```
-Pluginval failed [N] tests:
-- [Test name]: [Description]
-- [Test name]: [Description]
-
-Options:
-1. Investigate failures
-2. Show full pluginval report
-3. Continue anyway (skip validation)
-```
+<error_handling>
+  <on_failure type="automated_tests|build|pluginval">
+    Present standard failure menu:
+    1. Investigate (trigger deep-research skill)
+    2. Show me the code
+    3. Show full output
+    4. I'll fix it manually (or continue anyway for pluginval)
+  </on_failure>
+</error_handling>
 
 ## Output
 
-After successful testing:
-```
-✓ [Test method] passed
-
-Next steps:
-- Test manually in DAW (if not done)
-- /improve [PluginName] if you find issues
-```
+After successful testing, display:
+- Success message with test method
+- Next step suggestions (manual DAW testing, /improve if issues found)

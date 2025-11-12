@@ -5,24 +5,111 @@ description: Deep investigation for complex JUCE problems
 
 # /research
 
-Invoke the deep-research skill to investigate complex JUCE plugin development problems.
+<routing>
+  <instruction>
+    Invoke the deep-research skill via the Skill tool.
+  </instruction>
 
+  <context_to_pass>
+    Pass the user's topic/question as the research subject to the skill.
+    Include any specific context from the conversation (plugin name, error messages, code snippets).
+  </context_to_pass>
+
+  <skill_responsibility>
+    The deep-research skill handles:
+    - Graduated research protocol execution (Level 1-3)
+    - Local troubleshooting/ knowledge base search
+    - Context7 JUCE documentation search
+    - JUCE forum and GitHub investigation
+    - Parallel research subagents (Level 3 only)
+    - Decision menu presentation per checkpoint protocol
+  </skill_responsibility>
+</routing>
+
+<state_management>
+  <reads_from>
+    <file path="troubleshooting/**/*.md">
+      Searches local knowledge base for existing solutions (Level 1).
+      Dual-indexed structure: by-plugin/ and by-symptom/.
+    </file>
+    <file path="troubleshooting/patterns/juce8-critical-patterns.md">
+      May reference critical patterns during investigation.
+    </file>
+  </reads_from>
+
+  <may_write_to>
+    <file path="troubleshooting/[category]/[plugin]/[problem].md">
+      If user chooses to document findings after Level 2-3 research.
+      Handled by troubleshooting-docs skill (not deep-research itself).
+    </file>
+  </may_write_to>
+
+  <integration>
+    <command name="/doc-fix">
+      Complementary: /doc-fix captures immediate solutions from conversation,
+      /research investigates complex unknowns requiring external search.
+    </command>
+    <command name="/improve">
+      May trigger research when implementing complex features or fixes.
+    </command>
+    <skill name="troubleshooting-docs">
+      May be invoked after successful research to document findings.
+    </skill>
+  </integration>
+</state_management>
+
+<success_protocol>
+After each level completion, the deep-research skill will:
+
+1. Present findings summary (solutions, sources, confidence level)
+2. Show decision menu per checkpoint protocol (see .claude/CLAUDE.md)
+3. Typical options include:
+   - Apply solution (recommended)
+   - Review details
+   - Escalate to next level (if applicable)
+   - Document findings (Level 2-3 only)
+   - Other
+4. WAIT for user response before proceeding
+
+The skill handles decision menu formatting and checkpoint protocol compliance.
+</success_protocol>
+
+<background_info>
 ## Purpose
 
-Uses graduated research protocol to find solutions efficiently:
+The deep-research skill uses a graduated research protocol (3 levels) to efficiently find solutions
+without over-researching simple problems. Auto-escalates based on confidence.
 
-- **Level 1:** Quick check (local docs + Context7) - 5-10 min
-- **Level 2:** Moderate investigation (forums + GitHub) - 15-30 min
-- **Level 3:** Deep research (parallel investigation + academic papers) - 30-60 min
+<graduated_protocol>
+  <level number="1" duration="5-10min" model="Sonnet">
+    <searches>
+      - Local troubleshooting/ knowledge base
+      - Context7 JUCE documentation (quick lookup)
+    </searches>
+    <output>Direct solution if confident match found</output>
+    <escalates_if>No confident solution in local/cached sources</escalates_if>
+  </level>
 
-Auto-escalates based on confidence. You control depth via decision menus.
+  <level number="2" duration="15-30min" model="Sonnet">
+    <searches>
+      - Context7 deep-dive (module-level documentation)
+      - JUCE forum discussions
+      - GitHub issues and solutions
+    </searches>
+    <output>Structured analysis with multiple solution options</output>
+    <escalates_if>Multiple partial solutions requiring comparison, or novel problem</escalates_if>
+  </level>
 
-## Usage
-
-```bash
-/research [topic]
-/research [question or problem description]
-```
+  <level number="3" duration="30-60min" model="Opus + extended thinking">
+    <approach>Parallel research subagents (2-3 concurrent)</approach>
+    <searches>
+      - Comprehensive approach comparison
+      - Academic papers (for DSP algorithms)
+      - Advanced JUCE API patterns
+    </searches>
+    <output>Detailed report with implementation roadmap and trade-off analysis</output>
+  </level>
+</graduated_protocol>
 
 ## Examples
 
@@ -33,173 +120,45 @@ Auto-escalates based on confidence. You control depth via decision menus.
 /research CPU spikes when changing parameters
 ```
 
-## What It Does
 
-### Level 1: Quick Check (5-10 min)
+<usage_guidance>
+  <appropriate_for>
+    <case>Complex DSP algorithm questions (wavetable synthesis, anti-aliasing, etc.)</case>
+    <case>Novel feature implementation research (no clear JUCE example)</case>
+    <case>Performance optimization strategies (CPU profiling, buffer management)</case>
+    <case>Advanced JUCE API usage (threading, real-time safety patterns)</case>
+    <case>Unknown errors requiring multi-source investigation</case>
+    <case>Architectural decisions (plugin structure, parameter management)</case>
+  </appropriate_for>
 
-- Searches local `troubleshooting/` knowledge base
-- Checks Context7 JUCE documentation
-- Returns immediately if confident solution found
+  <not_appropriate_for>
+    <case>Simple syntax errors - Fix directly, no research needed</case>
+    <case>Known issues already in troubleshooting/ - Use grep or Level 1 will find immediately</case>
+    <case>Basic JUCE API lookups - Use Context7 directly (faster)</case>
+    <case>Build configuration issues - Check juce8-critical-patterns.md first</case>
+  </not_appropriate_for>
 
-### Level 2: Moderate Investigation (15-30 min)
+  <efficiency_rationale>
+    - 40% of problems solved at Level 1 (5 min) - Known solutions
+    - 40% of problems solved at Level 2 (20 min) - Forum/GitHub documented
+    - 20% of problems require Level 3 (45 min) - Novel/complex research
+    - Average weighted resolution: ~15 minutes
+    - Knowledge base compounds: Level 3 today becomes Level 1 tomorrow
+  </efficiency_rationale>
+</usage_guidance>
 
-- Deep-dive Context7 module documentation
-- Searches JUCE forum for discussions
-- Searches GitHub for issues and solutions
-- Returns structured analysis with multiple options
+<technical_implementation>
+  <models>
+    - Level 1-2: Sonnet (fast, sufficient for documented problems)
+    - Level 3: Opus + extended thinking 15k budget (deep reasoning)
+  </models>
 
-### Level 3: Deep Research (30-60 min)
+  <timeout>Max 60 minutes (returns best findings if exceeded)</timeout>
 
-- **Switches to Opus model + extended thinking**
-- Spawns 2-3 parallel research subagents
-- Investigates multiple approaches concurrently
-- Synthesizes findings with comprehensive comparison
-- Academic paper search (for DSP algorithms)
-- Returns detailed report with implementation roadmap
-
-## Success Output
-
-### Level 1 (Fast Path)
-
-```
-✓ Level 1 complete (found solution)
-
-Source: troubleshooting/by-plugin/ReverbPlugin/parameter-issues/[file].md
-
-Solution: [Direct answer]
-
-What's next?
-1. Apply solution (recommended)
-2. Review details
-3. Continue deeper - Escalate to Level 2
-4. Other
-```
-
-### Level 2 (Moderate)
-
-```
-✓ Level 2 complete (found 2 solutions)
-
-Investigated sources:
-- Context7 JUCE docs
-- JUCE forum (3 threads)
-- GitHub (2 issues)
-
-Solutions:
-1. [Solution 1] (recommended)
-2. [Solution 2] (alternative)
-
-What's next?
-1. Apply recommended solution
-2. Review all options
-3. Continue deeper - Escalate to Level 3
-4. Other
-```
-
-### Level 3 (Comprehensive)
-
-```
-✓ Level 3 complete (parallel investigation)
-
-Investigated 3 approaches:
-1. [Approach 1] - Complexity: 2/5, CPU: Medium, Quality: High
-2. [Approach 2] - Complexity: 3/5, CPU: Low, Quality: High
-3. [Approach 3] - Complexity: 4/5, CPU: Low, Quality: Very High
-
-Recommendation: [Approach 1]
-Reasoning: [Why this is best fit]
-
-Implementation roadmap:
-[Step-by-step guide]
-
-What's next?
-1. Apply recommended solution (recommended)
-2. Review all findings
-3. Try alternative approach
-4. Document findings - Save to troubleshooting/
-5. Other
-```
-
-## When To Use
-
-**Use for:**
-
-- Complex DSP algorithm questions
-- Novel feature implementation research
-- Performance optimization strategies
-- JUCE API usage for advanced scenarios
-- Unknown errors requiring investigation
-- Architectural decisions
-
-**Don't use for:**
-
-- Simple syntax errors (obvious fixes)
-- Known issues (check local docs first)
-- Basic JUCE API lookups (use Context7 directly)
-
-## Why Graduated Protocol
-
-**Most problems are fast (Level 1: 5 min):**
-
-- 40% of problems have known solutions in local docs
-- Immediate lookup, no over-research
-
-**Some need moderate work (Level 2: 20 min):**
-
-- 40% of problems documented in JUCE forum/GitHub
-- Thorough but not exhaustive
-
-**Few need deep research (Level 3: 45 min):**
-
-- 20% of problems are novel or complex
-- Parallel investigation justified
-- Comprehensive comparison of approaches
-
-**Average resolution:** 15 minutes (weighted by success rates)
-
-## Integration with Knowledge Base
-
-**The feedback loop:**
-
-1. Level 3 research solves complex problem (45 min)
-2. Document findings → `troubleshooting/` knowledge base
-3. Similar problem occurs → Level 1 finds it (5 min)
-4. Knowledge compounds, research gets faster
-
-After successful Level 2-3 research:
-
-```
-This was a complex problem. Document for future reference?
-
-1. Yes - Create troubleshooting doc (recommended)
-2. No - Skip documentation
-```
-
-If "Yes" → Invokes troubleshooting-docs skill to capture solution.
-
-## Routes To
-
-`deep-research` skill
-
-## Related Commands
-
-- `/doc-fix` - Document solved problems (feeds Level 1 fast path)
-- `/improve [Plugin]` - Enhancement workflow (may trigger research)
-
-## Technical Details
-
-**Models:**
-
-- Level 1-2: Sonnet (fast, sufficient for documented problems)
-- Level 3: Opus + extended thinking 15k budget (deep reasoning)
-
-**Timeout:**
-
-- Max 60 minutes (returns best findings if exceeded)
-
-**Parallel Investigation (Level 3):**
-
-- Spawns 2-3 concurrent research subagents
-- Each investigates different approach
-- Main context synthesizes findings
-- Faster than serial research (3 agents = 20 min, not 60 min)
+  <parallel_investigation level="3">
+    Spawns 2-3 concurrent research subagents, each investigating different approach.
+    Main context synthesizes findings.
+    Faster than serial (3 agents = 20 min, not 60 min).
+  </parallel_investigation>
+</technical_implementation>
+</background_info>

@@ -1,7 +1,7 @@
 ---
 name: reset-to-ideation
 description: Roll back plugin to ideation stage - keep idea/mockups, remove all implementation
-args: "[PluginName]"
+argument-hint: "[PluginName]"
 ---
 
 # /reset-to-ideation - Surgical Rollback
@@ -12,78 +12,112 @@ args: "[PluginName]"
 
 ## Behavior
 
-When user runs `/reset-to-ideation [PluginName]`, invoke the plugin-lifecycle skill with mode: 'reset'.
+<preconditions enforcement="blocking">
+  <check target="PLUGINS.md" condition="plugin_exists">
+    Plugin entry MUST exist in PLUGINS.md
 
-## Quick Reference
+    <on_failure action="BLOCK">
+      Display error: "[PluginName] not found in PLUGINS.md.
 
-**What gets preserved:**
-- Creative brief (`.ideas/creative-brief.md`)
-- UI mockups (`.ideas/mockups/`)
-- Parameter specifications (`.ideas/parameter-spec.md`)
+      Run /dream to create a new plugin idea first."
+    </on_failure>
+  </check>
 
-**What gets removed:**
-- Source code (`Source/` directory)
-- Build configuration (`CMakeLists.txt`)
-- Implementation docs (`.ideas/architecture.md`, `.ideas/plan.md`)
-- Build artifacts and installed binaries
+  <check target="status" condition="has_implementation">
+    Status MUST NOT be 💡 Ideated (nothing to reset)
 
-**Status change:** [Any] → 💡 Ideated
+    <valid_states>
+      ✅ Working, 📦 Installed, 🚧 Stage N (N ≥ 2)
+    </valid_states>
+
+    <on_failure action="BLOCK">
+      Display error: "[PluginName] is already at ideation stage (💡 Ideated).
+
+      Nothing to reset - run /implement [PluginName] to start implementation."
+    </on_failure>
+  </check>
+
+  <check target="ideation_artifacts" condition="preservable_content_exists" severity="warning">
+    At least one ideation artifact MUST exist to preserve
+
+    <required_files>
+      - .ideas/creative-brief.md OR
+      - .ideas/mockups/*.html OR
+      - .ideas/parameter-spec.md
+    </required_files>
+
+    <on_failure action="WARN">
+      Display warning: "⚠️  No ideation artifacts found to preserve.
+
+      This will delete the plugin entirely. Consider /destroy instead."
+    </on_failure>
+  </check>
+</preconditions>
+
+<routing_logic>
+  <trigger>User invokes /reset-to-ideation [PluginName]</trigger>
+
+  <sequence>
+    <step order="1">Verify preconditions (block if failed)</step>
+    <step order="2" required="true">
+      Invoke plugin-lifecycle skill via Skill tool:
+
+      Parameters:
+      - plugin_name: $ARGUMENTS
+      - mode: 'reset'
+    </step>
+  </sequence>
+
+  <skill_reference>
+    Implementation: .claude/skills/plugin-lifecycle/references/mode-3-reset.md
+  </skill_reference>
+</routing_logic>
+
+## What Gets Preserved/Removed
+
+<preservation_contract>
+  <preserved>
+    - Creative brief (.ideas/creative-brief.md)
+    - UI mockups (.ideas/mockups/)
+    - Parameter specifications (.ideas/parameter-spec.md)
+  </preserved>
+
+  <removed>
+    - Source code (Source/ directory)
+    - Build configuration (CMakeLists.txt)
+    - Implementation docs (.ideas/architecture.md, .ideas/plan.md)
+    - Build artifacts and installed binaries
+  </removed>
+
+  <state_change>
+    Status: [Any] → 💡 Ideated
+  </state_change>
+</preservation_contract>
 
 ## Implementation
 
 See `.claude/skills/plugin-lifecycle/references/mode-3-reset.md` for complete rollback workflow.
 
-## Example Confirmation
+## User Confirmation
 
-```
-⚠️  Rolling back to ideation stage
+The plugin-lifecycle skill will present interactive confirmation showing:
+- Files to be removed (Source/, CMakeLists.txt, implementation docs, binaries)
+- Files to be preserved (creative-brief, mockups, parameter-spec)
+- Backup location (backups/rollbacks/)
+- Status transition ([Current] → 💡 Ideated)
 
-Will REMOVE:
-- Source code: plugins/[PluginName]/Source/ (47 files)
-- Build config: plugins/[PluginName]/CMakeLists.txt
-- Implementation docs: architecture.md, plan.md
-- Binaries: VST3 + AU (if installed)
-- Build artifacts
-
-Will PRESERVE:
-- Idea: creative-brief.md
-- Mockups: 2 versions (v1-ui, v2-ui)
-- Parameters: parameter-spec.md
-
-A backup will be created in backups/rollbacks/
-
-Status will change: [Current] → 💡 Ideated
-
-Continue? (y/N): _
-```
+See [plugin-lifecycle assets/reset-confirmation-example.txt](../.skills/plugin-lifecycle/assets/reset-confirmation-example.txt) for sample output.
 
 ## Success Output
 
-```
-✓ [PluginName] reset to ideation stage
+On successful reset, plugin-lifecycle skill displays:
+- Confirmation of removed files and directories
+- Confirmation of preserved ideation artifacts
+- Backup file path for recovery
+- Status transition confirmation
+- Suggested next steps
 
-Removed:
-- Source code: 47 files
-- Build configuration: CMakeLists.txt
-- Implementation docs: architecture.md, plan.md
-- Binaries: VST3 + AU (uninstalled)
-- Build artifacts
-
-Preserved:
-- Creative brief: creative-brief.md ✓
-- UI mockups: 2 versions ✓
-- Parameters: parameter-spec.md ✓
-
-Backup available at:
-backups/rollbacks/[PluginName]_20251110_235612.tar.gz
-
-Status changed: [Previous] → 💡 Ideated
-
-Next steps:
-1. Review mockups and parameter spec
-2. Run /implement [PluginName] to start fresh from Stage 0
-3. Or modify creative brief and re-run /dream
-```
+See [plugin-lifecycle assets/reset-success-example.txt](../.skills/plugin-lifecycle/assets/reset-success-example.txt) for sample output.
 
 ## Routes To
 
@@ -91,6 +125,26 @@ Next steps:
 
 ## Related Commands
 
-- `/destroy` - Complete removal with backup
-- `/uninstall` - Remove binaries only, keep source
-- `/clean` - Interactive menu to choose cleanup operation
+<related_commands>
+  <decision_matrix>
+    <scenario condition="want_to_start_over_but_keep_idea">
+      Use: /reset-to-ideation (THIS COMMAND)
+      Effect: Keep creative brief/mockups, delete implementation
+    </scenario>
+
+    <scenario condition="want_to_remove_binaries_only">
+      Use: /uninstall
+      Effect: Remove installed VST3/AU, keep source code
+    </scenario>
+
+    <scenario condition="want_to_delete_everything">
+      Use: /destroy
+      Effect: Remove plugin entirely (with backup)
+    </scenario>
+
+    <scenario condition="unsure_which_cleanup">
+      Use: /clean
+      Effect: Interactive menu to choose operation
+    </scenario>
+  </decision_matrix>
+</related_commands>

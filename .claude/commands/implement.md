@@ -1,126 +1,176 @@
 ---
 name: implement
 description: Build plugin through implementation stages 2-6
+argument-hint: [PluginName?]
+allowed-tools: Bash(test:*)
 ---
 
 # /implement
 
 When user runs `/implement [PluginName?]`, invoke the plugin-workflow skill to build the plugin (stages 2-6 only).
 
-**NOTE:** Planning (stages 0-1) must be completed first via `/plan` command.
+<prerequisite>
+  Planning (stages 0-1) must be completed first via `/plan` command.
+</prerequisite>
 
 ## Preconditions
 
-**1. Check PLUGINS.md status:**
+<preconditions enforcement="blocking">
+  <decision_gate type="status_verification" source="PLUGINS.md">
+    <allowed_state status="🚧 Stage 1" description="Planning complete">
+      Start implementation at Stage 2
+    </allowed_state>
 
-Valid starting states:
-- 🚧 Stage 1 (planning complete) → Start at stage 2
-- 🚧 Stage 2-6 (in progress) → Resume from current stage
+    <allowed_state status="🚧 Stage 2-6" description="In progress">
+      Resume implementation at current stage
+    </allowed_state>
 
-**Block if wrong state:**
+    <blocked_state status="💡 Ideated" action="redirect">
+      <error_message>
+        [PluginName] planning is not complete.
 
-If 💡 Ideated or 🚧 Stage 0:
-```
-[PluginName] planning is not complete.
+        Run /plan [PluginName] first to complete stages 0-1:
+        - Stage 0: Research → architecture.md
+        - Stage 1: Planning → plan.md
 
-Run /plan [PluginName] first to complete stages 0-1:
-- Stage 0: Research → architecture.md
-- Stage 1: Planning → plan.md
+        Then run /implement to build (stages 2-6).
+      </error_message>
+    </blocked_state>
 
-Then run /implement to build (stages 2-6).
-```
+    <blocked_state status="🚧 Stage 0" action="redirect">
+      <error_message>
+        [PluginName] planning is not complete.
 
-If ✅ Working:
-```
-[PluginName] is already implemented and working.
+        Run /plan [PluginName] first to complete stages 0-1:
+        - Stage 0: Research → architecture.md
+        - Stage 1: Planning → plan.md
 
-Use /improve [PluginName] to make changes or add features.
-```
+        Then run /implement to build (stages 2-6).
+      </error_message>
+    </blocked_state>
 
-**2. REQUIRE planning artifacts exist:**
+    <blocked_state status="✅ Working" action="redirect">
+      <error_message>
+        [PluginName] is already implemented and working.
 
-Check for required contracts:
-```bash
-test -f "plugins/${PLUGIN_NAME}/.ideas/architecture.md" || echo "✗ architecture.md MISSING"
-test -f "plugins/${PLUGIN_NAME}/.ideas/plan.md" || echo "✗ plan.md MISSING"
-test -f "plugins/${PLUGIN_NAME}/.ideas/parameter-spec.md" || echo "✗ parameter-spec.md MISSING"
-```
+        Use /improve [PluginName] to make changes or add features.
+      </error_message>
+    </blocked_state>
+  </decision_gate>
 
-If any missing, BLOCK with:
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✗ BLOCKED: Missing planning artifacts
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  <decision_gate type="contract_verification" blocking="true">
+    <required_contracts>
+      <contract path="plugins/${PLUGIN_NAME}/.ideas/architecture.md" created_by="Stage 0"/>
+      <contract path="plugins/${PLUGIN_NAME}/.ideas/plan.md" created_by="Stage 1"/>
+      <contract path="plugins/${PLUGIN_NAME}/.ideas/parameter-spec.md" created_by="ideation"/>
+    </required_contracts>
 
-Implementation requires complete planning contracts:
+    <validation_command>
+      # See .claude/skills/plugin-workflow/references/precondition-checks.sh for reusable check functions
+      test -f "plugins/${PLUGIN_NAME}/.ideas/architecture.md" &amp;&amp; \
+      test -f "plugins/${PLUGIN_NAME}/.ideas/plan.md" &amp;&amp; \
+      test -f "plugins/${PLUGIN_NAME}/.ideas/parameter-spec.md"
+    </validation_command>
 
-Required contracts:
-[✓/✗] architecture.md - [exists/MISSING]
-[✓/✗] plan.md - [exists/MISSING]
-[✓/✗] parameter-spec.md - [exists/MISSING]
+    <on_failure action="BLOCK">
+      <error_message>
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        ✗ BLOCKED: Missing planning artifacts
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-HOW TO UNBLOCK:
-1. Run: /plan [PluginName]
-   - Completes Stage 0 (Research) → architecture.md
-   - Completes Stage 1 (Planning) → plan.md
+        Implementation requires complete planning contracts:
 
-2. If parameter-spec.md missing:
-   - Run: /dream [PluginName]
-   - Create and finalize UI mockup
-   - Finalization generates parameter-spec.md
+        Required contracts:
+        [✓/✗] architecture.md - [exists/MISSING]
+        [✓/✗] plan.md - [exists/MISSING]
+        [✓/✗] parameter-spec.md - [exists/MISSING]
 
-Once all contracts exist, /implement will proceed.
-```
+        HOW TO UNBLOCK:
+        1. Run: /plan [PluginName]
+           - Completes Stage 0 (Research) → architecture.md
+           - Completes Stage 1 (Planning) → plan.md
+
+        2. If parameter-spec.md missing:
+           - Run: /dream [PluginName]
+           - Create and finalize UI mockup
+           - Finalization generates parameter-spec.md
+
+        Once all contracts exist, /implement will proceed.
+      </error_message>
+    </on_failure>
+  </decision_gate>
+</preconditions>
 
 ## Behavior
 
-**Without argument:**
-List plugins eligible for implementation:
-- Status: 🚧 Stage 1 (ready to start)
-- Status: 🚧 Stage 2-6 (in progress)
+<routing>
+  <no_argument behavior="interactive_selection">
+    <query source="PLUGINS.md" filter="status in (🚧 Stage 1, 🚧 Stage 2-6)">
+      List plugins eligible for implementation:
+      - Status: 🚧 Stage 1 (ready to start)
+      - Status: 🚧 Stage 2-6 (in progress)
+    </query>
 
-Present numbered menu of eligible plugins.
+    <presentation format="numbered_menu">
+      Present numbered menu of eligible plugins with their current stage.
+      Wait for user selection.
+    </presentation>
+  </no_argument>
 
-**With plugin name:**
-```bash
-/implement [PluginName]
-```
+  <with_argument behavior="direct_invocation">
+    <sequence enforce_order="true">
+      <step order="1">Parse plugin name from $ARGUMENTS</step>
+      <step order="2">Execute precondition verification (see &lt;preconditions&gt; above)</step>
+      <step order="3">IF preconditions pass: Invoke plugin-workflow skill via Skill tool</step>
+      <step order="4">IF preconditions fail: Display blocking error and EXIT</step>
+    </sequence>
 
-Verify preconditions, then invoke the plugin-workflow skill.
+    <skill_invocation tool="Skill" target="plugin-workflow">
+      Pass plugin name and starting stage to plugin-workflow skill.
+      Skill handles stages 2-6 implementation using subagent dispatcher pattern.
+    </skill_invocation>
+  </with_argument>
+</routing>
 
 ## The Implementation Stages
 
-The plugin-workflow skill executes stages 2-6 using subagent dispatcher pattern:
+<skill_delegation>
+  <command_responsibility>
+    This command is a ROUTING LAYER:
+    1. Verify preconditions (status check, contract verification)
+    2. Invoke plugin-workflow skill via Skill tool
+    3. Return control to user
+  </command_responsibility>
 
-1. **Stage 2:** Foundation (10-15 min) → CMakeLists.txt, structure (foundation-agent)
-2. **Stage 3:** Shell (5-10 min) → Compiling skeleton (shell-agent)
-3. **Stage 4:** DSP (30 min - 3 hrs) → Audio processing (dsp-agent)
-4. **Stage 5:** GUI (20-60 min) → WebView interface (gui-agent)
-5. **Stage 6:** Validation (20-40 min) → Pluginval, presets, docs (validator)
+  <skill_responsibility ref="plugin-workflow">
+    The plugin-workflow skill orchestrates stages 2-6:
 
-Each stage:
-1. Invokes specialized subagent via Task tool
-2. Commits changes after subagent completes
-3. Updates state files (.continue-here.md, PLUGINS.md)
-4. Presents numbered decision menu
-5. Waits for user response
+    Stage 2 (Foundation) → Stage 3 (Shell) → Stage 4 (DSP) → Stage 5 (GUI) → Stage 6 (Validation)
+
+    Each stage uses specialized subagent, follows checkpoint protocol (commit, state update, decision menu).
+
+    For stage details, see .claude/skills/plugin-workflow/SKILL.md
+  </skill_responsibility>
+
+  <handoff_point>
+    Command completes immediately after invoking plugin-workflow skill.
+    All subsequent interaction (stage progression, decision menus) happens within skill context.
+  </handoff_point>
+</skill_delegation>
 
 ## Decision Menus
 
-At each stage completion, you'll see:
-```
-✓ Stage [N] complete: [accomplishment]
+<decision_menus>
+  Plugin-workflow skill presents decision menus at each stage completion.
+  Format follows system-wide checkpoint protocol (see .claude/CLAUDE.md).
 
-What's next?
-1. Continue to Stage [N+1] (recommended)
-2. Review [what was created]
-3. [Stage-specific option]
-4. Run tests/validation
-5. Pause here
-6. Other
+  Menu structure:
+  - Completion statement
+  - Context-appropriate options (primary, secondary, discovery, pause)
+  - User selection prompt
 
-Choose (1-6): _
-```
+  Command does NOT present menus - this is skill's responsibility after delegation.
+</decision_menus>
 
 ## Pause & Resume
 
@@ -133,13 +183,13 @@ Resume with `/continue [PluginName]`
 
 ## Output
 
-By completion, you have:
-- ✅ Compiling VST3 + AU plugins
-- ✅ Working audio processing
-- ✅ Functional WebView UI
-- ✅ Pluginval compliant
-- ✅ Factory presets
-- ✅ Git history with all stages
+<expected_output>
+  By completion, plugin has:
+  - Compiling VST3 + AU plugins
+  - Working audio processing + functional WebView UI
+  - Pluginval compliant with factory presets
+  - Complete git history for all stages
+</expected_output>
 
 ## Workflow Integration
 

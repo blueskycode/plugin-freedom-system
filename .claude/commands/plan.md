@@ -7,107 +7,85 @@ description: Interactive research and planning for plugin (Stages 0-1)
 
 When user runs `/plan [PluginName?]`, invoke the plugin-planning skill to handle Stages 0-1 (Research and Planning).
 
-## Preconditions
+<preconditions enforcement="blocking">
+  <status_verification target="PLUGINS.md" required="true">
+    <step order="1">Verify plugin entry exists in PLUGINS.md</step>
+    <step order="2">Extract current status emoji</step>
+    <step order="3">
+      Evaluate status against allowed/blocked states:
 
-**Check PLUGINS.md status:**
+      <allowed_state status="💡 Ideated">
+        OK to proceed - start fresh planning (Stage 0)
+      </allowed_state>
 
-1. Verify plugin exists in PLUGINS.md
-2. Check current status:
-   - If 💡 Ideated: OK to proceed (start fresh)
-   - If 🚧 Stage 0: OK to proceed (resume research)
-   - If 🚧 Stage 1: OK to proceed (resume planning)
-   - If 🚧 Stage 2+: **BLOCK** - Plugin already in implementation
+      <allowed_state status="🚧 Stage 0">
+        OK to proceed - resume research phase
+      </allowed_state>
 
-**If plugin is Stage 2 or beyond:**
-```
-[PluginName] is already in implementation (Stage [N]).
+      <allowed_state status="🚧 Stage 1">
+        OK to proceed - resume planning phase
+      </allowed_state>
 
-Stages 0-1 (planning) are complete. Use:
-- /continue [PluginName] - Resume from current stage
-- /implement [PluginName] - Review implementation workflow
-```
+      <blocked_state status="🚧 Stage N" condition="N >= 2" action="BLOCK_WITH_MESSAGE">
+        [PluginName] is already in implementation (Stage [N]).
 
-**Check for creative brief:**
-```
-plugins/[PluginName]/.ideas/creative-brief.md
-```
+        Stages 0-1 (planning) are complete. Use:
+        - /continue [PluginName] - Resume from current stage
+        - /implement [PluginName] - Review implementation workflow
+      </blocked_state>
+    </step>
+  </status_verification>
 
-If missing, offer:
-```
-✗ No creative brief found for [PluginName]
+  <contract_verification blocking="true">
+    <required_contract path="plugins/[PluginName]/.ideas/creative-brief.md" created_by="ideation">
+      Creative brief defines plugin vision and serves as input to Stage 0 (Research)
+    </required_contract>
 
-Planning requires a creative brief to define plugin vision.
+    <on_missing action="BLOCK_AND_OFFER_SOLUTIONS">
+      Display error message:
+      "✗ No creative brief found for [PluginName]
 
-Would you like to:
-1. Create one now (/dream [PluginName])
-2. Skip planning (not recommended - leads to implementation drift)
-```
+      Planning requires a creative brief to define plugin vision.
 
-## Behavior
+      Would you like to:
+      1. Create one now (/dream [PluginName])
+      2. Skip planning (not recommended - leads to implementation drift)"
 
-**Without argument:**
-List plugins eligible for planning:
-- Status: 💡 Ideated
-- Status: 🚧 Stage 0 (resume)
-- Status: 🚧 Stage 1 (resume)
+      WAIT for user response. Do NOT invoke plugin-planning skill until contract exists.
+    </on_missing>
+  </contract_verification>
+</preconditions>
 
-Present numbered menu of eligible plugins or offer to create new plugin.
+<behavior>
+  <routing_logic>
+    <condition check="argument_provided">
+      IF $ARGUMENTS provided:
+        1. Verify preconditions (block if failed)
+        2. Invoke plugin-planning skill with plugin name
+      ELSE:
+        1. List plugins with status: 💡 Ideated, 🚧 Stage 0, 🚧 Stage 1
+        2. Present numbered menu of eligible plugins
+        3. Offer to create new plugin via /dream
+    </condition>
+  </routing_logic>
+</behavior>
 
-**With plugin name:**
-```bash
-/plan [PluginName]
-```
+<delegation>
+  Invoke plugin-planning skill to execute Stages 0-1 (Research and Planning).
 
-Verify preconditions, then invoke the plugin-planning skill.
+  Skill produces:
+  - architecture.md (DSP specification)
+  - plan.md (implementation strategy with complexity score)
+</delegation>
 
-## The Planning Stages
+<contract_enforcement>
+  Stage 0 requires creative-brief.md (checked in preconditions above).
 
-The plugin-planning skill executes:
+  Stage 1 requires parameter-spec.md and architecture.md.
+  If missing, plugin-planning skill will BLOCK with unblock instructions.
 
-**Stage 0: Research (5-10 min)**
-- Identify plugin technical approach
-- Research JUCE DSP modules
-- Research professional plugin examples
-- Research parameter ranges
-- Design sync (if mockup exists)
-- Output: architecture.md (DSP specification)
-
-**Stage 1: Planning (2-5 min)**
-- Calculate complexity score
-- Determine implementation strategy (single-pass vs phased)
-- Create phase breakdown for complex plugins
-- Output: plan.md (implementation strategy)
-
-## Contract Enforcement
-
-**Stage 0 (Research):**
-- Requires: creative-brief.md
-- Creates: architecture.md
-
-**Stage 1 (Planning) BLOCKS if missing:**
-- parameter-spec.md (from UI mockup finalization)
-- architecture.md (from Stage 0)
-
-If blocked at Stage 1:
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✗ BLOCKED: Cannot proceed to Stage 1
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Missing implementation contracts:
-✓ creative-brief.md - exists
-✗ parameter-spec.md - MISSING (required)
-[✓/✗] architecture.md - [status]
-
-HOW TO UNBLOCK:
-1. parameter-spec.md: Complete ui-mockup workflow
-   Run: /dream [PluginName] → Choose "Create UI mockup" → Finalize
-
-2. architecture.md: Complete Stage 0 (Research)
-   Run: /plan [PluginName] → Complete Stage 0 first
-
-Once both contracts exist, Stage 1 will proceed.
-```
+  Note: Command verifies entry preconditions only. Skill handles stage-specific contract validation.
+</contract_enforcement>
 
 ## Handoff to Implementation
 

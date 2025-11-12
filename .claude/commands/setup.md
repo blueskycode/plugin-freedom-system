@@ -12,10 +12,8 @@ Validates system dependencies required for JUCE plugin development and configure
 When user runs `/setup` or `/setup --test=SCENARIO`, invoke the system-setup skill.
 
 **Test Mode:**
-If user provides `--test=SCENARIO`, pass the scenario to the skill:
-- Available scenarios: fresh-system, missing-juce, old-versions, custom-paths, partial-python
-- In test mode, the skill uses mock data and makes no actual system changes
-- Useful for validating the setup flow without modifying the environment
+If user provides `--test=SCENARIO`, pass the scenario to the skill.
+Test mode uses mock data and makes no system changes. See [test-scenarios.md](../skills/system-setup/assets/test-scenarios.md) for available scenarios.
 
 The skill will:
 1. Detect current platform (macOS, Linux, Windows)
@@ -27,7 +25,14 @@ The skill will:
 
 ## Preconditions
 
-None - this is the first command new users should run.
+<preconditions>
+  <required>None - this is the first command new users should run</required>
+
+  <rationale>
+    This command validates and installs system dependencies, so it cannot have dependency preconditions.
+    Should be run BEFORE any plugin development commands (/dream, /plan, /implement).
+  </rationale>
+</preconditions>
 
 ## Output
 

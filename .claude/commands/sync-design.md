@@ -1,15 +1,45 @@
 ---
 name: sync-design
 description: Validate mockup ↔ creative brief consistency
+argument-hint: "[PluginName]"
 ---
 
 # /sync-design
 
-Invoke the design-sync skill to validate mockup ↔ creative brief consistency.
+<routing_logic>
+  <decision_gate type="precondition_check">
+    When user runs `/sync-design [PluginName?]`:
+
+    <phase_1_parameter_resolution>
+      IF no plugin name provided:
+        List eligible plugins (have creative-brief.md + mockup finalized)
+        Wait for user selection
+      ELSE:
+        Use provided plugin name
+    </phase_1_parameter_resolution>
+
+    <phase_2_precondition_validation>
+      Verify required files exist (see <preconditions> below)
+
+      IF any files missing:
+        BLOCK - display error and guidance
+        DO NOT invoke skill
+
+      IF all files present:
+        Proceed to Phase 3
+    </phase_2_precondition_validation>
+
+    <phase_3_skill_invocation>
+      Invoke design-sync skill via Skill tool with:
+      - Plugin name
+      - Paths to validated files
+    </phase_3_skill_invocation>
+  </decision_gate>
+</routing_logic>
 
 ## Purpose
 
-Catches design drift before implementation by comparing the finalized UI mockup against the original creative brief.
+Compare finalized UI mockup against original creative brief to catch design drift before implementation.
 
 **Detects:**
 - Parameter count mismatches (brief says 8, mockup has 12)
@@ -47,28 +77,18 @@ Catches design drift before implementation by comparing the finalized UI mockup 
 - Assesses feature completeness (brief promises vs mockup delivery)
 - Evaluates scope changes (justified evolution vs drift)
 
-### Drift Categories
+### Drift Handling
 
-**No Drift ✅**
-- Everything matches, proceed with confidence
+The design-sync skill categorizes drift into 4 levels:
+✅ No Drift, ✅ Acceptable Evolution, ⚠️ Attention Required, ❌ Critical
 
-**Acceptable Evolution ✅**
-- Minor additions/refinements that improve design
-- Documents changes in brief's "Evolution" section
-- Proceeds with user approval
+See design-sync skill docs for drift category definitions and handling logic.
 
-**Drift Requiring Attention ⚠️**
-- Missing features or style mismatches
-- Presents options: Update mockup / Update brief / Override
+## Output
 
-**Critical Drift ❌**
-- Mockup contradicts core concept
-- BLOCKS implementation until resolved
-- No override option (must fix)
+The design-sync skill presents findings and context-appropriate decision menu.
 
-## Success Output
-
-### No Drift
+**Example output:**
 ```
 ✓ Design-brief alignment verified
 
@@ -82,57 +102,78 @@ What's next?
 3. Other
 ```
 
-### Acceptable Evolution
-```
-⚠️ Design evolution detected (acceptable)
+**Menu options adapt based on drift category:**
+- No drift: Continue implementation
+- Acceptable evolution: Update brief and continue / Review / Revert
+- Drift detected: Update mockup / Update brief / Override / Review
+- Critical drift: Update mockup / Update brief (no override)
 
-**Changes from brief:**
-- Parameter count: 12 (brief: 8) +4 parameters
-- Added: Visual feedback meter
-
-**Assessment:** Reasonable evolution
-
-What's next?
-1. Update brief and continue (recommended)
-2. Review changes
-3. Revert to original
-4. Other
-```
-
-### Drift Detected
-```
-⚠️ Design drift detected
-
-**Issues:**
-1. Missing feature: "Preset browser" from brief
-2. Visual mismatch: Brief is vintage, mockup is modern
-3. Scope reduction: 5 parameters (brief: 12)
-
-**Recommendation:** Address before implementation
-
-What's next?
-1. Update mockup - Align with brief
-2. Update brief - Adjust vision
-3. Continue anyway (override)
-4. Review comparison
-5. Other
-```
+See design-sync skill for complete drift handling logic.
 
 ## Preconditions
 
-**Required files:**
-- `plugins/[Plugin]/.ideas/creative-brief.md` - Original vision
-- `plugins/[Plugin]/.ideas/parameter-spec.md` - From finalized mockup
-- `plugins/[Plugin]/.ideas/mockups/vN-ui.yaml` - Finalized mockup
+<preconditions enforcement="blocking">
+  <required_files>
+    <file path="plugins/$PLUGIN_NAME/.ideas/creative-brief.md"
+          purpose="Original vision"
+          created_by="ideation">
+      creative-brief.md
+    </file>
+    <file path="plugins/$PLUGIN_NAME/.ideas/parameter-spec.md"
+          purpose="Parameter specification from finalized mockup"
+          created_by="ui-mockup Phase 4">
+      parameter-spec.md
+    </file>
+    <file path="plugins/$PLUGIN_NAME/.ideas/mockups/vN-ui.yaml"
+          purpose="Finalized UI mockup (N = version number)"
+          created_by="ui-mockup"
+          pattern="v*-ui.yaml">
+      mockup file (any version)
+    </file>
+  </required_files>
 
-If missing, skill will guide you to create them.
+  <validation_sequence>
+    <step order="1">Extract plugin name from $ARGUMENTS or prompt user if missing</step>
+    <step order="2">
+      Check existence of all required files
+      ```bash
+      PLUGIN_NAME="$1"
+      test -f "plugins/${PLUGIN_NAME}/.ideas/creative-brief.md" || MISSING="$MISSING creative-brief.md"
+      test -f "plugins/${PLUGIN_NAME}/.ideas/parameter-spec.md" || MISSING="$MISSING parameter-spec.md"
+      find "plugins/${PLUGIN_NAME}/.ideas/mockups/" -name "v*-ui.yaml" -type f | grep -q . || MISSING="$MISSING mockup"
+      ```
+    </step>
+    <step order="3">
+      IF any files missing:
+        BLOCK with message:
+        ```
+        ✗ BLOCKED: Missing required files for design-sync
+
+        [PluginName] is missing files needed for design validation:
+        [List missing files here]
+
+        HOW TO UNBLOCK:
+        - Missing creative-brief.md: Run /dream [PluginName] to create
+        - Missing mockup: Run /dream [PluginName] and finalize UI mockup
+        - Missing parameter-spec.md: Finalize mockup (auto-generated in Phase 4)
+
+        Once all files exist, /sync-design will proceed.
+        ```
+        DO NOT invoke design-sync skill
+    </step>
+    <step order="4">
+      IF all files present:
+        Invoke design-sync skill via Skill tool
+    </step>
+  </validation_sequence>
+</preconditions>
 
 ## When To Use
 
-**Use when:**
-- After mockup finalization (auto-suggested by ui-mockup)
-- Before Stage 1 Planning (optional pre-check)
-- Anytime you want to verify alignment
+**Run when:**
+- After mockup finalization (auto-suggested by ui-mockup skill)
+- Before Stage 1 Planning as optional pre-check
+- Anytime to verify alignment
 - When unsure if design matches vision
 
 **Don't use when:**
@@ -170,18 +211,7 @@ What's next?
 
 ## Technical Details
 
-**Models:**
-- Sonnet + extended thinking (8k budget)
-- Semantic analysis requires creative reasoning
-
-**Validation:**
-- Dual-layer (quantitative + semantic)
-- Confidence levels (HIGH/MEDIUM/LOW)
-- Objective thresholds (from drift-detection.md)
-
-**Override tracking:**
-- All overrides logged to `.validator-overrides.yaml`
-- Audit trail: why did we proceed with drift?
+The design-sync skill uses dual-layer validation (quantitative + semantic) and logs all override decisions to `.validator-overrides.yaml` for audit trail.
 
 ## Routes To
 
@@ -189,7 +219,7 @@ What's next?
 
 ## Related Commands
 
-- `/implement [Plugin]` - Full 7-stage workflow (calls design-sync at Stage 1 if mockup exists)
+- `/implement [Plugin]` - Full 7-stage workflow (auto-runs design-sync at Stage 1 if mockup exists)
 - `/improve [Plugin]` - Enhancement workflow (may re-validate design)
 
 ## Why This Matters

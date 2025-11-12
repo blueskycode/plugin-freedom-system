@@ -1,6 +1,7 @@
 ---
 name: doc-fix
 description: Document a recently solved problem for the knowledge base
+argument-hint: "[optional: brief context about the fix]"
 ---
 
 # /doc-fix
@@ -29,9 +30,17 @@ Captures problem solutions while context is fresh, creating structured documenta
 
 ## Preconditions
 
-- Problem has been solved (not in-progress)
-- Solution has been verified working
-- Non-trivial problem (not simple typo or obvious error)
+<preconditions enforcement="advisory">
+  <check condition="problem_solved">
+    Problem has been solved (not in-progress)
+  </check>
+  <check condition="solution_verified">
+    Solution has been verified working
+  </check>
+  <check condition="non_trivial">
+    Non-trivial problem (not simple typo or obvious error)
+  </check>
+</preconditions>
 
 ## What It Creates
 
@@ -71,27 +80,29 @@ What's next?
 
 ## Why This Matters
 
-**Builds knowledge base:**
-- Future sessions find solutions faster
+**Feedback loop:** Hit problem → Fix → Document → Next time finds solution instantly
+
+**Impact:**
 - deep-research searches local docs first (Level 1 Fast Path)
 - No solving same problem repeatedly
 - Institutional knowledge compounds over time
 
-**The feedback loop:**
-1. Hit problem → deep-research searches local troubleshooting/
-2. Fix problem → troubleshooting-docs creates documentation
-3. Hit similar problem → Found instantly in Level 1
-4. Knowledge grows organically
+**Integration:** Documentation feeds back into deep-research skill's Level 1 search.
 
 ## Auto-Invoke
 
-Skill automatically activates after phrases:
-- "that worked"
-- "it's fixed"
-- "working now"
-- "problem solved"
+<auto_invoke>
+  <trigger_phrases>
+    - "that worked"
+    - "it's fixed"
+    - "working now"
+    - "problem solved"
+  </trigger_phrases>
 
-Manual invocation via `/doc-fix` when you want to document without waiting for auto-detection.
+  <manual_override>
+    Use /doc-fix [context] to document immediately without waiting for auto-detection.
+  </manual_override>
+</auto_invoke>
 
 ## Routes To
 

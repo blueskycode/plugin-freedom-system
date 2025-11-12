@@ -433,25 +433,13 @@ Calculate new version based on selection.
 </phase>
 
 <critical_sequence phase="backup-creation" enforcement="strict">
-## Phase 2: Create Backup
+## Phase 2: Verify Rollback Path
 
-**CRITICAL INVARIANT:** Code changes (Phase 3) MUST NOT execute until backup created.
-**ENFORCEMENT:** Block execution, halt workflow if backup creation fails.
-**VIOLATION CONSEQUENCE:** No recovery if Phase 3 fails.
-
-**CRITICAL: Must complete before any code changes**
-
-```bash
-mkdir -p backups/
-cp -r plugins/[PluginName] backups/[PluginName]-v[X.Y.Z]-$(date +%Y%m%d-%H%M%S)
-```
-
-Confirm backup created:
+**Baseline backup verified in Phase 0.9. Confirm ready to proceed:**
 
 ```
-✓ Backup created: backups/[PluginName]-v[X.Y.Z]-[timestamp]
-
-This backup can be restored if anything goes wrong.
+✓ Backup verified: backups/[PluginName]/v[CurrentVersion]/
+Ready to implement changes for v[NewVersion]
 ```
 
 </critical_sequence>

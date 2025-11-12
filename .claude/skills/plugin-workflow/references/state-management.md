@@ -226,7 +226,7 @@ return output
 Use discovery markers (`← User discovers [feature]`) to surface hidden capabilities:
 - "Save as template ← Add to UI template library"
 - "Design sync ← Validate brief matches mockup"
-- "/troubleshoot-juce ← Document problems for knowledge base"
+- "/research ← Deep investigation for complex problems"
 
 ### handleMenuChoice(choice, options, context)
 

@@ -1,16 +1,37 @@
 ---
 description: Add current problem to Required Reading (juce8-critical-patterns.md)
-args: "[optional: pattern name]"
+argument-hint: "[optional: pattern name]"
 ---
+
+<state_files>
+  <file path="troubleshooting/patterns/juce8-critical-patterns.md" mode="read_write">
+    Read: Count existing patterns via grep (determine next number)
+    Write: Append new pattern before "## Usage Instructions" section
+    Contract: Each pattern numbered sequentially (## N. Title)
+  </file>
+</state_files>
 
 # Add Critical Pattern Command
 
-**Purpose:** Directly promote the current problem to Required Reading without going through full documentation workflow.
+Directly promote current problem to Required Reading (juce8-critical-patterns.md) without full documentation workflow.
 
-**When to use:**
+**Use when:**
 - System made this mistake multiple times
-- You know it's critical and needs to be in every subagent's context
-- Want to skip documentation ceremony and go straight to pattern capture
+- Critical pattern affects all future plugins
+- Want fast path (skip documentation ceremony)
+
+<preconditions enforcement="blocking">
+  <check target="conversation_context" condition="has_problem_solution">
+    Current conversation MUST contain a solved problem with:
+    - Clear description of what was wrong
+    - Working solution with code examples
+    - Explanation of why the fix works
+  </check>
+
+  <check target="file_exists" condition="target_file">
+    Target file MUST exist: troubleshooting/patterns/juce8-critical-patterns.md
+  </check>
+</preconditions>
 
 ## Task
 
@@ -18,66 +39,67 @@ Extract pattern from current conversation and add to `troubleshooting/patterns/j
 
 ## Steps
 
-1. **Review conversation** - Extract:
-   - What was wrong (❌ WRONG example with code)
-   - What's correct (✅ CORRECT example with code)
-   - Why this is required (technical explanation)
-   - When this applies (placement/context)
+<critical_sequence>
+  <step order="1" required="true">
+    Review conversation and extract:
+    - ❌ WRONG example (with code)
+    - ✅ CORRECT example (with code)
+    - Technical explanation (why required)
+    - Context (when this applies)
+  </step>
 
-2. **Determine pattern number:**
-   ```bash
-   # Count existing patterns
-   grep -c "^## [0-9]" troubleshooting/patterns/juce8-critical-patterns.md
-   # Next number = count + 1
-   ```
+  <step order="2" required="true" tool="Bash">
+    Determine pattern number:
+    ```bash
+    # Count existing patterns
+    grep -c "^## [0-9]" troubleshooting/patterns/juce8-critical-patterns.md
+    # Next number = count + 1
+    ```
+  </step>
 
-3. **Format pattern:**
-   ```markdown
-   ## N. [Pattern Name] (ALWAYS REQUIRED)
+  <step order="3" required="true">
+    Format pattern using template:
+    ```markdown
+    ## N. [Pattern Name] (ALWAYS REQUIRED)
 
-   ### ❌ WRONG ([Will cause X error])
-   ```[language]
-   [code showing wrong approach]
-   ```
+    ### ❌ WRONG ([Will cause X error])
+    ```[language]
+    [code showing wrong approach]
+    ```
 
-   ### ✅ CORRECT
-   ```[language]
-   [code showing correct approach]
-   ```
+    ### ✅ CORRECT
+    ```[language]
+    [code showing correct approach]
+    ```
 
-   **Why:** [Technical explanation]
+    **Why:** [Technical explanation]
 
-   **Placement/Context:** [When this applies]
+    **Placement/Context:** [When this applies]
 
-   **Documented in:** [If there's a troubleshooting doc, link it]
+    **Documented in:** [If there's a troubleshooting doc, link it]
 
-   ---
-   ```
+    ---
+    ```
+  </step>
 
-4. **Add to file:**
-   - Append pattern before "## Usage Instructions" section
-   - Update numbering if needed
+  <step order="4" required="true" tool="Edit">
+    Add pattern to file:
+    - Append before "## Usage Instructions" section
+    - Update numbering if needed
+  </step>
 
-5. **Confirm:**
-   ```
-   ✓ Added to Required Reading
+  <step order="5" required="true" blocking="true">
+    Confirm completion:
+    ```
+    ✓ Added to Required Reading
 
-   Pattern #N: [Pattern Name]
-   Location: troubleshooting/patterns/juce8-critical-patterns.md
+    Pattern #N: [Pattern Name]
+    Location: troubleshooting/patterns/juce8-critical-patterns.md
 
-   All subagents (Stages 2-5) will see this pattern before code generation.
-   ```
-
-## Example Usage
-
-```bash
-# After solving a problem:
-User: "add that to the required reading"
-# Command auto-invokes
-
-# Or explicitly:
-User: "/add-critical-pattern WebView Setup"
-```
+    All subagents (Stages 2-5) will see this pattern before code generation.
+    ```
+  </step>
+</critical_sequence>
 
 ## Integration
 
@@ -86,13 +108,6 @@ User: "/add-critical-pattern WebView Setup"
 - Explicit: `/add-critical-pattern [name]`
 - Option 2 from `/doc-fix` decision menu
 
-**Related commands:**
-- `/doc-fix` - Full documentation workflow with option to promote
-- This command - Direct promotion (faster path)
+**Related:** `/doc-fix` provides full documentation workflow with promotion option
 
-## Notes
-
-- Use when you're confident it's critical (affects all future plugins)
-- If unsure, use `/doc-fix` and choose Option 2 from menu
-- Pattern name optional (Claude will infer from context)
-- Can be run after `/doc-fix` completes if you change your mind
+**Notes:** Pattern name optional (inferred from context). If unsure whether critical, use `/doc-fix` instead.
