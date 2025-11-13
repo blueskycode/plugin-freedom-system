@@ -370,7 +370,7 @@ For detailed algorithm, pseudocode, and examples, see [references/phase-aware-di
 <design_sync_gate enforcement_level="MANDATORY">
   **Purpose:** Prevent design drift before implementation begins.
 
-  **When:** BEFORE dispatching Stage 2 (foundation-agent), IF mockup exists.
+  **When:** BEFORE dispatching Stage 2 (foundation-shell-agent), IF mockup exists.
 
   **Conditions:**
   - IF plugins/[PluginName]/.ideas/mockups/ directory exists
