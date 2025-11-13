@@ -65,17 +65,16 @@ What would you like to do?
 
 **Purpose:** Update plugin status emoji in PLUGINS.md in BOTH locations atomically.
 
-**Valid statuses for plugin-workflow (stages 2-6):**
-- `🚧 Stage 2` - Foundation in progress
-- `🚧 Stage 3` - Shell in progress
-- `🚧 Stage 4` - DSP in progress
-- `🚧 Stage N.M` - Phased implementation (stage.phase)
-- `🚧 Stage 5` - GUI in progress
-- `🚧 Stage 6` - Validation in progress
-- `✅ Working` - Stage 6 complete, not installed
+**Valid statuses for plugin-workflow (stages 2-5):**
+- `🔨 Building System` - Build system and parameters in progress (Stage 2 internal)
+- `🎵 Processing Audio` - DSP implementation in progress (Stage 3 internal)
+- `🎨 Designing Interface` - UI integration in progress (Stage 4 internal)
+- `✅ Validating` - Final validation and polish (Stage 5 internal)
+- `✅ Ready to Install` - Validation complete, not deployed
 - `📦 Installed` - Deployed to system folders
 
-**Note:** Statuses `💡 Ideated` and `🚧 Stage 0-1` are managed by plugin-planning skill.
+**Note:** Statuses `💡 Concept Ready` and planning statuses are managed by plugin-planning skill.
+**Internal:** Stage numbers (2-5) are used internally but never shown to users.
 
 **Implementation (ATOMIC - updates both locations):**
 
@@ -503,15 +502,18 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - If commit fails → Rollback ALL state changes to maintain consistency
 
 **Commit variations by stage:**
-- Stage 0: `feat: [Plugin] Stage 0 - research complete`
-- Stage 1: `feat: [Plugin] Stage 1 - planning complete`
-- Stage 2: `feat: [Plugin] Stage 2 - foundation compiles`
-- Stage 3: `feat: [Plugin] Stage 3 - shell loads in DAW`
-- Stage 4: `feat: [Plugin] Stage 4 - DSP complete`
-- Stage 4.1: `feat: [Plugin] Stage 4.1 - core processing`
-- Stage 4.2: `feat: [Plugin] Stage 4.2 - parameter modulation`
-- Stage 5: `feat: [Plugin] Stage 5 - GUI complete`
-- Stage 6: `feat: [Plugin] Stage 6 - validation complete`
+- Stage 0: `feat: [Plugin] research complete` (internal)
+- Stage 1: `feat: [Plugin] planning complete` (internal)
+- Stage 2: `feat: [Plugin] build system ready`
+- Stage 3: `feat: [Plugin] audio engine working`
+- Stage 3.1: `feat: [Plugin] audio phase 3.1 - core processing`
+- Stage 3.2: `feat: [Plugin] audio phase 3.2 - parameter modulation`
+- Stage 4: `feat: [Plugin] UI integrated`
+- Stage 4.1: `feat: [Plugin] UI phase 4.1 - layout and bindings`
+- Stage 4.2: `feat: [Plugin] UI phase 4.2 - visual polish`
+- Stage 5: `feat: [Plugin] validation complete`
+
+**Note:** Commit messages use milestone language internally but still include stage numbers for technical tracking.
 
 ### verifyGitAvailable()
 

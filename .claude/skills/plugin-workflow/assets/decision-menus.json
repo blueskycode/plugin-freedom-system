@@ -1,78 +1,76 @@
 {
   "stage_2_complete": {
-    "completion_statement": "Foundation compiles successfully",
+    "milestone": "Build System Ready",
+    "completion_statement": "Your plugin compiles successfully with all parameters implemented",
     "options": [
-      { "label": "Continue to Stage 3", "recommended": true, "action": "next_stage" },
-      { "label": "Review foundation code", "action": "review_code" },
-      { "label": "Test build manually", "action": "manual_test" },
-      { "label": "Review CMakeLists.txt", "action": "review_cmake" },
-      { "label": "Pause here", "action": "pause" }
+      { "label": "Implement audio processing", "description": "Make your DSP vision a reality", "recommended": true, "action": "next_stage" },
+      { "label": "Review build system", "action": "review_code" },
+      { "label": "Test parameters in DAW", "action": "manual_test" },
+      { "label": "Inspect CMake configuration", "action": "review_cmake" },
+      { "label": "Pause workflow", "description": "Resume anytime", "action": "pause" }
     ]
   },
   "stage_3_complete": {
-    "completion_statement": "APVTS implemented with all parameters",
+    "milestone": "Audio Engine Working",
+    "completion_statement": "Your DSP processing is implemented and functional",
     "options": [
-      { "label": "Continue to Stage 4", "recommended": true, "action": "next_stage" },
-      { "label": "Review parameter setup", "action": "review_code" },
-      { "label": "Test parameter values", "action": "manual_test" },
-      { "label": "Pause here", "action": "pause" }
+      { "label": "Integrate UI", "description": "Connect your interface to the audio engine", "recommended": true, "action": "next_stage" },
+      { "label": "Review DSP code", "action": "review_code" },
+      { "label": "Test audio in DAW", "description": "Listen to your processing", "action": "manual_test" },
+      { "label": "Run validation", "action": "run_tests", "discovery": "Automated stability testing" },
+      { "label": "Pause workflow", "description": "Resume anytime", "action": "pause" }
     ]
   },
   "stage_4_complete": {
-    "completion_statement": "DSP implementation complete",
+    "milestone": "UI Integrated",
+    "completion_statement": "Your interface is connected and responding to parameter changes",
     "options": [
-      { "label": "Continue to Stage 5", "recommended": true, "action": "next_stage" },
-      { "label": "Review DSP code", "action": "review_code" },
-      { "label": "Test audio processing", "action": "manual_test" },
-      { "label": "Run validation suite", "action": "run_tests", "discovery": "Automated pluginval testing" },
-      { "label": "Pause here", "action": "pause" }
+      { "label": "Complete validation", "description": "Final polish and testing", "recommended": true, "action": "next_stage" },
+      { "label": "Review UI code", "action": "review_code" },
+      { "label": "Test interface", "description": "Try out your UI design", "action": "manual_test" },
+      { "label": "Save as template", "action": "save_template", "discovery": "Reuse this design" },
+      { "label": "Pause workflow", "description": "Resume anytime", "action": "pause" }
     ]
   },
   "stage_5_complete": {
-    "completion_statement": "GUI integrated with parameter bindings",
+    "milestone": "Plugin Complete",
+    "completion_statement": "All validation passed - your plugin is ready to use",
     "options": [
-      { "label": "Continue to Stage 6", "recommended": true, "action": "next_stage" },
-      { "label": "Review GUI code", "action": "review_code" },
-      { "label": "Test UI manually", "action": "manual_test" },
-      { "label": "Save as template", "action": "save_template", "discovery": "Add to UI template library" },
-      { "label": "Pause here", "action": "pause" }
-    ]
-  },
-  "stage_6_complete": {
-    "completion_statement": "Validation complete - plugin ready for use",
-    "options": [
-      { "label": "Install plugin", "recommended": true, "action": "install" },
-      { "label": "Review CHANGELOG", "action": "review_changelog" },
-      { "label": "Test in DAW", "action": "manual_test" },
-      { "label": "Create distribution package", "action": "package" },
+      { "label": "Install plugin", "description": "Deploy to your DAW", "recommended": true, "action": "install" },
+      { "label": "Review changelog", "action": "review_changelog" },
+      { "label": "Test in DAW", "description": "Try it in production", "action": "manual_test" },
+      { "label": "Create installer", "action": "package", "discovery": "Package for distribution" },
       { "label": "Done", "action": "complete" }
     ]
   },
   "build_failure": {
-    "completion_statement": "Build failed at stage {stage}",
+    "completion_statement": "Build failed during {milestone}",
+    "context": "Cannot proceed until compilation succeeds",
     "options": [
-      { "label": "Investigate", "action": "deep_research", "discovery": "Run deep-research to find root cause" },
-      { "label": "Show me the code", "action": "show_code" },
-      { "label": "Show full build output", "action": "show_build_log" },
-      { "label": "I'll fix it manually", "action": "manual_fix" }
+      { "label": "Investigate root cause", "action": "deep_research", "discovery": "Deep analysis of build errors" },
+      { "label": "Show error context", "action": "show_code" },
+      { "label": "Show full build log", "action": "show_build_log" },
+      { "label": "I'll fix it manually", "description": "Resume with /continue", "action": "manual_fix" }
     ]
   },
   "validation_failure": {
-    "completion_statement": "pluginval failed with {count} errors",
+    "completion_statement": "Validation failed with {count} issues",
+    "context": "Plugin needs fixes before deployment",
     "options": [
-      { "label": "Investigate", "action": "deep_research", "discovery": "Deep investigation for validation issues" },
-      { "label": "Show failures", "action": "show_failures" },
+      { "label": "Investigate failures", "action": "deep_research", "discovery": "Find validation problems" },
+      { "label": "Show failure details", "action": "show_failures" },
       { "label": "Retry validation", "action": "retry" },
-      { "label": "I'll fix it manually", "action": "manual_fix" }
+      { "label": "I'll fix it manually", "description": "Resume with /continue", "action": "manual_fix" }
     ]
   },
   "phase_complete": {
-    "completion_statement": "Phase {phase} of stage {stage} complete",
+    "completion_statement": "Phase {phase_description} complete",
+    "context": "{phases_remaining} phases remaining",
     "options": [
-      { "label": "Continue to next phase", "recommended": true, "action": "next_phase" },
-      { "label": "Review phase code", "action": "review_code" },
-      { "label": "Test this phase", "action": "manual_test" },
-      { "label": "Pause here", "action": "pause" }
+      { "label": "Continue to next phase", "description": "{next_phase_description}", "recommended": true, "action": "next_phase" },
+      { "label": "Review this phase", "action": "review_code" },
+      { "label": "Test current state", "action": "manual_test" },
+      { "label": "Pause workflow", "description": "Resume anytime", "action": "pause" }
     ]
   }
 }

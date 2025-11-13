@@ -17,15 +17,19 @@ When technical terms appear in the system, they refer to these concepts:
 - **Standalone** → Desktop Application Mode (run plugin as standalone app, not in DAW)
 
 **Workflow Terms:**
-- **Stage 0-5** → Development Phases (Research → Planning → Foundation+Shell → DSP → GUI → Validation)
+- **Milestone Language** → User-facing progress indicators (Build System Ready → Audio Engine Working → UI Integrated → Plugin Complete)
 - **Contract Files** → Design Documents (creative-brief.md, parameter-spec.md, architecture.md, plan.md)
 - **Checkpoint** → Progress Save Point (commit code, update state, present decision menu)
-- **Subagent** → Specialized Worker (focused AI agent for specific implementation stage)
+- **Subagent** → Specialized Worker (focused AI agent for specific implementation milestone)
 
 **System Terms:**
 - **Drift** → Design Mismatch (when mockup doesn't match creative brief)
 - **Tier** → Investigation Complexity Level (how deep to analyze a problem: quick/moderate/deep)
 - **Required Reading** → Critical Patterns (juce8-critical-patterns.md - common mistakes to avoid)
+
+**Internal vs User-Facing:**
+- **Internal:** Stage numbers (2-5) used for routing logic, never shown to users
+- **User-facing:** Milestone names (Build System Ready, Audio Engine Working, etc.) shown in all menus and messages
 
 When these terms appear in the system, the plain-language equivalent will be shown on first use:
 - Example: "Setting up APVTS (Parameter System - handles your knobs and sliders)..."

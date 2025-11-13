@@ -137,16 +137,18 @@ Build verification handled by workflow after agent completes.
 const report = parseSubagentReport(guiResult);
 
 if (report.status === "success") {
-  console.log(`✓ Stage 5 complete: UI integrated`);
-  console.log(`  - Mockup version: ${report.outputs.ui_mockup_version}`);
-  console.log(`  - Bindings: ${report.outputs.binding_count}`);
+  console.log(`✓ UI Integrated`);
+  console.log(`   Your interface is connected and responding to parameter changes`);
+  console.log(`  `);
+  console.log(`  Mockup version: ${report.outputs.ui_mockup_version}`);
+  console.log(`  Bindings: ${report.outputs.binding_count}`);
   console.log(
-    `  - All parameters bound: ${
+    `  All parameters bound: ${
       report.outputs.all_parameters_bound ? "Yes" : "No"
     }`
   );
   console.log(
-    `  - Member order correct: ${
+    `  Member order correct: ${
       report.outputs.member_order_correct ? "Yes" : "No"
     }`
   );
@@ -531,12 +533,12 @@ ${status === "PASS" ? "✓" : "✗"} Validator ${status}: Stage 5 Review
     console.log(`
 
 What's next?
-1. Continue to Stage 6 (final validation) ${
+1. Complete validation - Final polish and testing ${
       continue_to_next_stage ? "(recommended by validator)" : ""
     }
 2. Address validator ${errors.length > 0 ? "errors" : "warnings"} first
 3. Review validator report details
-4. Test UI manually in DAW
+4. Test UI manually in DAW - Try out your interface
 5. Review UI code
 6. Other
 
@@ -552,19 +554,21 @@ Choose (1-6): _
 ### 8. Decision Menu (After Tests Pass)
 
 ```
-✓ Stage 5 complete: UI operational
+✓ UI Integrated
+   Your interface is connected and responding to parameter changes
 
 Plugin: [PluginName]
 UI: WebView integrated from [mockup version]
 Bindings: [N] parameters bound to UI
 Tests: All passed (including UI sync)
+Status: Ready for final validation
 
 What's next?
-1. Continue to Stage 6 (final validation) (recommended)
-2. Test UI manually in DAW
-3. Review UI code
-4. Adjust UI styling
-5. Pause here
+1. Complete validation - Final polish and testing (recommended)
+2. Test UI in DAW - Try out your interface
+3. Review UI code - See implementation details
+4. Refine styling - Polish visual design
+5. Pause workflow - Resume anytime
 6. Other
 
 Choose (1-6): _

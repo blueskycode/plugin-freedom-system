@@ -129,7 +129,7 @@ for (let i = 0; i < phases.length; i++) {
     `Phase ${phase.number} complete: ${phase.description}`,
     i < phases.length - 1
       ? [`Continue to Phase ${phases[i + 1].number}`, "Review phase code", "Test", "Pause"]
-      : ["Continue to Stage " + (currentStage + 1), "Review complete stage", "Test", "Pause"]
+      : [getNextMilestoneAction(currentStage), "Review completed work", "Test current state", "Pause workflow"]
   );
 
   // CHECKPOINT: Update plugin status

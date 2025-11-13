@@ -263,12 +263,13 @@ If installation fails, plugin-lifecycle will present error handling options. If 
 **Post-installation decision menu:**
 
 ```
-✓ Plugin installed to system folders.
+✓ Plugin Complete
+   All validation passed - your plugin is ready to use
 
 What's next?
-1. Test in DAW (recommended)
-2. Make improvements
-3. Create new plugin
+1. Test in DAW - Try it in production (recommended)
+2. Make improvements - Add features or fix issues
+3. Create new plugin - Start fresh
 4. Other
 
 Choose (1-4): _

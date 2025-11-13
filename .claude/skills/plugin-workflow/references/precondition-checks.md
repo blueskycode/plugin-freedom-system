@@ -25,24 +25,29 @@ grep "^### $PLUGIN_NAME$" PLUGINS.md
 ```
 
 Parse the Status line to determine current state:
-- 🚧 Stage 1 → Planning just completed, OK to proceed
-- 🚧 Stage N (N ≥ 2) → Implementation in progress, OK to resume
-- 💡 Ideated → Planning not started, BLOCK
-- ✅ Working → Plugin complete, BLOCK (suggest /improve)
-- 📦 Installed → Plugin complete and installed, BLOCK (suggest /improve)
+- 📋 Planning → Planning just completed, OK to proceed
+- 🔨 Building System → Implementation in progress, OK to resume
+- 🎵 Processing Audio → DSP in progress, OK to resume
+- 🎨 Designing Interface → UI in progress, OK to resume
+- 💡 Concept Ready → Planning not started, BLOCK
+- ✅ Ready to Install → Plugin complete, BLOCK (suggest /improve)
+- 📦 Installed → Plugin deployed, BLOCK (suggest /improve)
 
 ## Block Messages
 
 ### Missing Contracts
 ```
-[PluginName] is missing required planning documents.
+Cannot start implementation - planning incomplete
 
-Missing files will be listed here:
-- architecture.md (from Stage 0)
-- plan.md (from Stage 1)
-- creative-brief.md (from ideation)
+[PluginName] is missing required planning documents:
+- architecture.md (DSP design)
+- plan.md (implementation strategy)
+- creative-brief.md (vision document)
 
-Run /plan [PluginName] to complete planning stages 0-1.
+Complete planning first:
+   Run /plan [PluginName] to create these documents
+
+Then resume with /implement [PluginName]
 ```
 
 ### Wrong Status

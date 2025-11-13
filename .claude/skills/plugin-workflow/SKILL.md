@@ -22,11 +22,13 @@ preconditions:
 
 This skill orchestrates plugin implementation stages 2-5. Stages 0-1 (Research & Planning) are handled by the `plugin-planning` skill.
 
-**Implementation Stages:**
-- **Stage 2:** Foundation + Shell - Create build system and implement APVTS (foundation-shell-agent)
-- **Stage 3:** DSP - Implement audio processing (dsp-agent)
-- **Stage 4:** GUI - Integrate WebView UI with parameter bindings (gui-agent)
-- **Stage 5:** Validation - Factory presets, pluginval, CHANGELOG (direct or validator)
+**Implementation Milestones:**
+- **Build System Ready:** Create build system and implement parameters (foundation-shell-agent)
+- **Audio Engine Working:** Implement audio processing (dsp-agent)
+- **UI Integrated:** Connect WebView interface to audio engine (gui-agent)
+- **Plugin Complete:** Factory presets, validation, and final polish (direct or validator)
+
+**Internal stage mapping:** Stage 2 → Build System Ready, Stage 3 → Audio Engine Working, Stage 4 → UI Integrated, Stage 5 → Plugin Complete
 
 <orchestration_rules enforcement_level="STRICT">
   <delegation_rule
@@ -686,7 +688,7 @@ Workflow is successful when:
 - Test failure investigation options
 - Phase completion (for complex plugins)
 - Examples:
-  - "Stage 3 complete. What's next? 1) Continue to Stage 4..."
+  - "Audio Engine Working. What's next? 1) Integrate UI..."
   - "Build failed. What should I do? 1) Retry build..."
   - "Phase 4.1 complete. 1) Continue to Phase 4.2..."
 
@@ -695,14 +697,15 @@ Workflow is successful when:
 **Inline menu format:**
 
 ```
-✓ [Stage/Phase completion statement]
+✓ [Milestone name]
+   [What was accomplished - specific context]
 
 What's next?
 
-1. [Continue to next stage/phase] (recommended)
-2. [Run tests] - Validate current implementation
-3. [Pause workflow] - Save progress and exit
-4. [Review changes] - Show git diff
+1. [Next milestone action] - [Benefit of this action] (recommended)
+2. [Run tests] - Verify current implementation
+3. [Pause workflow] - Resume anytime
+4. [Review code] - See what was implemented
 5. Other
 
 Choose (1-5): _

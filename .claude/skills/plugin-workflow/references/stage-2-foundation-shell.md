@@ -357,21 +357,22 @@ EOF
 ### 9. Decision Menu
 
 ```
-✓ Stage 2 complete: Build system + parameter system operational
+✓ Build System Ready
+   Your plugin compiles successfully with all parameters implemented
 
 Plugin: [PluginName]
 Build artifacts: VST3, AU, Standalone
 Parameters: [N] parameters implemented
 APVTS: Created and functional
-Status: Compiles successfully, loads in DAW (no DSP yet)
+Status: Compiles successfully, loads in DAW (ready for DSP implementation)
 
 What's next?
-1. Continue to Stage 3 (implement DSP) (recommended)
-2. Test parameters in DAW
-3. Review build artifacts
-4. Review parameter code
-5. Show parameter list
-6. Pause here
+1. Implement audio processing - Make your DSP vision a reality (recommended)
+2. Test parameters in DAW - Verify controls respond
+3. Review build system - See generated artifacts
+4. Review parameter code - Check APVTS implementation
+5. Show parameter list - View all controls
+6. Pause workflow - Resume anytime
 7. Other
 
 Choose (1-7): _

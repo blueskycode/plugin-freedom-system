@@ -91,15 +91,17 @@ Build verification handled by workflow after agent completes.
 const report = parseSubagentReport(dspResult);
 
 if (report.status === "success") {
-  console.log(`✓ Stage 4 complete: DSP implemented`);
+  console.log(`✓ Audio Engine Working`);
+  console.log(`   Your DSP processing is implemented and functional`);
+  console.log(`  `);
   console.log(
-    `  - Components: ${report.outputs.dsp_components_implemented.length}`
+    `  Components: ${report.outputs.dsp_components_implemented.length}`
   );
   console.log(
-    `  - Parameters connected: ${report.outputs.parameters_connected.length}`
+    `  Parameters connected: ${report.outputs.parameters_connected.length}`
   );
   console.log(
-    `  - Real-time safe: ${report.outputs.real_time_safe ? "Yes" : "No"}`
+    `  Real-time safe: ${report.outputs.real_time_safe ? "Yes" : "No"}`
   );
 
   // Continue to auto-test (Step 5)
@@ -408,17 +410,17 @@ if (!testsPassed) {
 ✗ Stage 4 Tests FAILED
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Stage 4 DSP implementation completed, but automated tests failed.
+Audio processing implementation completed, but automated tests failed.
 
 Test results:
 ${testResult}
 
-CANNOT proceed to Stage 5 (GUI) with failing DSP tests.
+Cannot integrate UI until audio engine is stable.
 
 What would you like to do?
-1. Investigate test failures
-2. Show me the DSP code
-3. Show me the test output
+1. Investigate test failures - Find root cause
+2. Show me the DSP code - Review implementation
+3. Show me the test output - See detailed errors
 4. I'll fix it manually (say "resume automation" when ready)
 
 Choose (1-4): _
@@ -537,12 +539,12 @@ ${status === "PASS" ? "✓" : "✗"} Validator ${status}: Stage 4 Review
     console.log(`
 
 What's next?
-1. Continue to Stage 5 (implement UI) ${
+1. Integrate UI - Connect your interface to the audio engine ${
       continue_to_next_stage ? "(recommended by validator)" : ""
     }
 2. Address validator ${errors.length > 0 ? "errors" : "warnings"} first
 3. Review validator report details
-4. Test audio manually in DAW
+4. Test audio manually in DAW - Listen to your processing
 5. Review DSP code
 6. Other
 
@@ -558,19 +560,21 @@ Choose (1-6): _
 ### 7. Decision Menu (After Tests Pass)
 
 ```
-✓ Stage 4 complete: Audio processing operational
+✓ Audio Engine Working
+   Your DSP processing is implemented and functional
 
 Plugin: [PluginName]
 DSP components: [N]
 Parameters connected: [N]
 Tests: All passed
+Status: Ready for UI integration
 
 What's next?
-1. Continue to Stage 5 (implement UI) (recommended)
-2. Test audio manually in DAW
-3. Review DSP code
-4. Adjust DSP before UI
-5. Pause here
+1. Integrate UI - Connect your interface to the audio engine (recommended)
+2. Test audio in DAW - Listen to your processing
+3. Review DSP code - See implementation details
+4. Fine-tune audio - Adjust processing before UI
+5. Pause workflow - Resume anytime
 6. Other
 
 Choose (1-6): _
