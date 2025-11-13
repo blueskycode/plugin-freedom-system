@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_dsp/juce_dsp.h>
 
 class Drum808AudioProcessor : public juce::AudioProcessor
 {
@@ -33,6 +34,39 @@ public:
 
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+
+    // Tom Voice structure (used for both Low Tom and Mid Tom)
+    struct TomVoice
+    {
+        juce::dsp::Oscillator<float> oscillator;
+        juce::dsp::StateVariableTPTFilter<float> filter;
+
+        bool isPlaying = false;
+        float envelopeTime = 0.0f;
+        float velocity = 0.0f;
+
+        void trigger(float velocityGain, float baseFreq)
+        {
+            isPlaying = true;
+            envelopeTime = 0.0f;
+            velocity = velocityGain;
+            oscillator.setFrequency(baseFreq);
+            filter.setCutoffFrequency(baseFreq);
+        }
+
+        void stop()
+        {
+            isPlaying = false;
+            envelopeTime = 0.0f;
+        }
+    };
+
+    // DSP Components (BEFORE APVTS for initialization order)
+    juce::dsp::ProcessSpec spec;
+    TomVoice lowTom;
+    TomVoice midTom;
+
+    double currentSampleRate = 44100.0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Drum808AudioProcessor)
 };

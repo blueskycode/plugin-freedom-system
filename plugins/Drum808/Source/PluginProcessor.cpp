@@ -226,8 +226,30 @@ Drum808AudioProcessor::~Drum808AudioProcessor()
 
 void Drum808AudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    // DSP initialization will be added in Stage 3
-    juce::ignoreUnused(sampleRate, samplesPerBlock);
+    currentSampleRate = sampleRate;
+
+    // Prepare DSP spec
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
+    spec.numChannels = static_cast<juce::uint32>(getTotalNumOutputChannels());
+
+    // Configure and prepare Low Tom
+    lowTom.oscillator.initialise([](float x) { return std::sin(x); }); // Sine wave
+    lowTom.oscillator.prepare(spec);
+    lowTom.filter.prepare(spec);
+    lowTom.filter.setType(juce::dsp::StateVariableTPTFilterType::bandpass);
+    lowTom.filter.setResonance(0.5f); // Initial Q (will be updated per-sample)
+    lowTom.oscillator.reset();
+    lowTom.filter.reset();
+
+    // Configure and prepare Mid Tom
+    midTom.oscillator.initialise([](float x) { return std::sin(x); }); // Sine wave
+    midTom.oscillator.prepare(spec);
+    midTom.filter.prepare(spec);
+    midTom.filter.setType(juce::dsp::StateVariableTPTFilterType::bandpass);
+    midTom.filter.setResonance(0.5f); // Initial Q (will be updated per-sample)
+    midTom.oscillator.reset();
+    midTom.filter.reset();
 }
 
 void Drum808AudioProcessor::releaseResources()
@@ -238,16 +260,152 @@ void Drum808AudioProcessor::releaseResources()
 void Drum808AudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
-    juce::ignoreUnused(midiMessages);
 
-    // Clear all output buses (no audio input for instruments)
+    // Clear all output buses
     buffer.clear();
 
-    // Parameter access example (for Stage 3 DSP implementation):
-    // auto* kickLevelParam = parameters.getRawParameterValue("kick_level");
-    // float kickLevel = kickLevelParam->load();  // Atomic read (real-time safe)
+    const int numSamples = buffer.getNumSamples();
 
-    // MIDI processing and synthesis will be added in Stage 3
+    // Read tom parameters (atomic, real-time safe)
+    auto* lowTomLevelParam = parameters.getRawParameterValue("lowtom_level");
+    auto* lowTomToneParam = parameters.getRawParameterValue("lowtom_tone");
+    auto* lowTomDecayParam = parameters.getRawParameterValue("lowtom_decay");
+    auto* lowTomTuningParam = parameters.getRawParameterValue("lowtom_tuning");
+
+    auto* midTomLevelParam = parameters.getRawParameterValue("midtom_level");
+    auto* midTomToneParam = parameters.getRawParameterValue("midtom_tone");
+    auto* midTomDecayParam = parameters.getRawParameterValue("midtom_decay");
+    auto* midTomTuningParam = parameters.getRawParameterValue("midtom_tuning");
+
+    float lowTomLevel = lowTomLevelParam->load() / 100.0f; // 0-100% → 0.0-1.0
+    float lowTomTone = lowTomToneParam->load() / 100.0f;
+    float lowTomDecay = lowTomDecayParam->load() / 1000.0f; // ms → seconds
+    float lowTomTuning = lowTomTuningParam->load(); // semitones
+
+    float midTomLevel = midTomLevelParam->load() / 100.0f;
+    float midTomTone = midTomToneParam->load() / 100.0f;
+    float midTomDecay = midTomDecayParam->load() / 1000.0f;
+    float midTomTuning = midTomTuningParam->load();
+
+    // Calculate tuned base frequencies
+    const float lowTomBaseFreq = 150.0f * std::pow(2.0f, lowTomTuning / 12.0f);
+    const float midTomBaseFreq = 220.0f * std::pow(2.0f, midTomTuning / 12.0f);
+
+    // Map tone parameter to filter Q (0.5 to 5.0)
+    const float lowTomQ = 0.5f + (lowTomTone * 4.5f);
+    const float midTomQ = 0.5f + (midTomTone * 4.5f);
+
+    // Process MIDI messages
+    for (const auto metadata : midiMessages)
+    {
+        auto message = metadata.getMessage();
+
+        if (message.isNoteOn())
+        {
+            int note = message.getNoteNumber();
+            float velocity = message.getVelocity() / 127.0f;
+
+            // Map MIDI notes to voices
+            if (note == 41) // F1 → Low Tom
+            {
+                lowTom.trigger(velocity, lowTomBaseFreq);
+            }
+            else if (note == 45) // A1 → Mid Tom
+            {
+                midTom.trigger(velocity, midTomBaseFreq);
+            }
+        }
+    }
+
+    // Synthesize voices (per-sample processing)
+    for (int sample = 0; sample < numSamples; ++sample)
+    {
+        float lowTomSample = 0.0f;
+        float midTomSample = 0.0f;
+
+        // Low Tom synthesis
+        if (lowTom.isPlaying)
+        {
+            // Update filter Q
+            lowTom.filter.setCutoffFrequency(lowTomBaseFreq);
+            lowTom.filter.setResonance(lowTomQ);
+
+            // Generate oscillator sample
+            float oscSample = lowTom.oscillator.processSample(0.0f);
+
+            // Apply filter
+            float filteredSample = lowTom.filter.processSample(0, oscSample);
+
+            // Exponential envelope
+            float envelope = std::exp(-lowTom.envelopeTime / lowTomDecay);
+
+            // Denormal protection
+            if (envelope < 1e-8f)
+            {
+                lowTom.stop();
+                envelope = 0.0f;
+            }
+
+            // Apply envelope, velocity, and level
+            lowTomSample = filteredSample * envelope * lowTom.velocity * lowTomLevel;
+
+            // Advance envelope time
+            lowTom.envelopeTime += 1.0f / static_cast<float>(currentSampleRate);
+        }
+
+        // Mid Tom synthesis
+        if (midTom.isPlaying)
+        {
+            // Update filter Q
+            midTom.filter.setCutoffFrequency(midTomBaseFreq);
+            midTom.filter.setResonance(midTomQ);
+
+            // Generate oscillator sample
+            float oscSample = midTom.oscillator.processSample(0.0f);
+
+            // Apply filter
+            float filteredSample = midTom.filter.processSample(0, oscSample);
+
+            // Exponential envelope
+            float envelope = std::exp(-midTom.envelopeTime / midTomDecay);
+
+            // Denormal protection
+            if (envelope < 1e-8f)
+            {
+                midTom.stop();
+                envelope = 0.0f;
+            }
+
+            // Apply envelope, velocity, and level
+            midTomSample = filteredSample * envelope * midTom.velocity * midTomLevel;
+
+            // Advance envelope time
+            midTom.envelopeTime += 1.0f / static_cast<float>(currentSampleRate);
+        }
+
+        // Write to output buses
+        // Main mix (bus 0, stereo)
+        if (buffer.getNumChannels() >= 2)
+        {
+            buffer.addSample(0, sample, lowTomSample + midTomSample); // Left
+            buffer.addSample(1, sample, lowTomSample + midTomSample); // Right
+        }
+
+        // Individual outputs (if enabled by DAW)
+        // Low Tom output (bus 2, channels 4-5)
+        if (buffer.getNumChannels() >= 6)
+        {
+            buffer.addSample(4, sample, lowTomSample); // Low Tom Left
+            buffer.addSample(5, sample, lowTomSample); // Low Tom Right
+        }
+
+        // Mid Tom output (bus 3, channels 6-7)
+        if (buffer.getNumChannels() >= 8)
+        {
+            buffer.addSample(6, sample, midTomSample); // Mid Tom Left
+            buffer.addSample(7, sample, midTomSample); // Mid Tom Right
+        }
+    }
 }
 
 juce::AudioProcessorEditor* Drum808AudioProcessor::createEditor()
