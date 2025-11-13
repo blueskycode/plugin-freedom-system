@@ -21,6 +21,14 @@ target_sources(Drum808
         Source/PluginEditor.cpp
 )
 
+# WebView UI Resources
+juce_add_binary_data(Drum808_UIResources
+    SOURCES
+        Source/ui/public/index.html
+        Source/ui/public/js/juce/index.js
+        Source/ui/public/js/juce/check_native_interop.js
+)
+
 # Include paths
 target_include_directories(Drum808
     PRIVATE
@@ -30,6 +38,7 @@ target_include_directories(Drum808
 # Required JUCE modules
 target_link_libraries(Drum808
     PRIVATE
+        Drum808_UIResources
         juce::juce_audio_basics
         juce::juce_audio_devices
         juce::juce_audio_formats
