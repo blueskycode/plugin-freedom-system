@@ -1,8 +1,9 @@
 ---
 name: troubleshoot-agent
 description: Deep research agent for build failures and JUCE problems. Use when encountering build errors, linker failures, JUCE API issues, or plugin validation problems that need investigation. Invoke for troubleshooting that requires graduated research depth.
-model: opus
 tools: Read, Grep, Glob, Bash, WebSearch, WebFetch, mcp__context7__search_juce_docs
+model: opus
+color: purple
 ---
 
 # Troubleshoot Subagent

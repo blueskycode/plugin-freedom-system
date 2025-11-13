@@ -1,16 +1,24 @@
 ---
 name: ui-mockup
-description: Generate production-ready WebView UI mockups in two phases - design iteration (2 files) then implementation scaffolding (5 files after approval)
+description: Orchestrator for WebView UI mockup workflow - delegates design iteration to ui-design-agent and implementation scaffolding to ui-finalization-agent
 allowed-tools:
   - Read
-  - Write
+  - Task
+  - AskUserQuestion
 preconditions:
   - None (can work standalone or with creative brief)
 ---
 
 # ui-mockup Skill
 
-**Purpose:** Generate production-ready WebView UIs in two phases. The HTML generated IS the plugin UI, not a throwaway prototype.
+**Purpose:** Pure orchestrator for WebView UI mockup workflow. Gathers requirements from user, then delegates file generation to specialized subagents.
+
+**Orchestration Pattern:**
+- This skill NEVER generates files directly
+- Phase A (design iteration): Delegates to ui-design-agent via Task tool
+- Phase B (implementation scaffolding): Delegates to ui-finalization-agent via Task tool
+- User interaction (questions, menus) handled in orchestrator
+- File generation handled in fresh agent contexts (prevents context bloat)
 
 ## Workflow Overview
 
@@ -334,184 +342,83 @@ Route based on answer:
 - Option 3 → Collect free-form text, merge with context, return to Phase 2
 ```
 
-## Phase 4: Generate Hierarchical YAML
+## Phase 4-5.45: Dispatch ui-design-agent
 
-**Create:** `plugins/[Name]/.ideas/mockups/v[N]-ui.yaml`
+**Invoke subagent via Task tool to generate design files (YAML + test HTML).**
 
-**Purpose:** Machine-readable design spec that guides HTML generation and C++ implementation.
+<delegation_protocol>
+**Before invocation:**
 
-**YAML structure:** See `assets/ui-yaml-template.yaml` for complete template with all control types.
+1. **Read context files:**
+   - creative-brief.md (if exists)
+   - Aesthetic template (if user selected one in Phase 0)
+   - User requirements from Phases 1-3
 
-**Required sections:**
-- window: Dimensions, resizability
-- controls: Array of control definitions (id, type, position, range)
-- styling: Colors, fonts, theme tokens
+2. **Detect version number:**
+   ```bash
+   MOCKUP_DIR="plugins/${PLUGIN_NAME}/.ideas/mockups"
+   LATEST_VERSION=$(ls -1 "$MOCKUP_DIR"/v*-ui.yaml 2>/dev/null | \
+                    sed 's/.*v\([0-9]*\)-.*/\1/' | sort -n | tail -1)
+   NEXT_VERSION=$((LATEST_VERSION + 1))
+   ```
 
-**Example YAML structure:**
-```yaml
-window:
-  width: 600
-  height: 400
-  resizable: false
+3. **Construct prompt with all context:**
+   - Plugin name
+   - Creative brief summary (if exists)
+   - User requirements (layout, style, controls)
+   - Aesthetic template content (if selected)
+   - Version number (v[N])
+   - Refinement feedback (if iteration)
 
-controls:
-  - id: threshold
-    type: slider
-    position: { x: 50, y: 100 }
-    range: [-60.0, 0.0]
-    default: -20.0
-    label: "Threshold"
+4. **Invoke ui-design-agent:**
+   ```
+   Task tool with:
+   - subagent_type: "ui-design-agent"
+   - description: "Generate UI mockup v[N] for [PluginName]"
+   - prompt: [constructed prompt with all context]
+   ```
 
-  - id: ratio
-    type: slider
-    position: { x: 200, y: 100 }
-    range: [1.0, 20.0]
-    default: 4.0
-    label: "Ratio"
+5. **Wait for JSON report:**
+   ```json
+   {
+     "status": "success" | "error",
+     "phase": "design-iteration",
+     "version": N,
+     "filesCreated": ["v[N]-ui.yaml", "v[N]-ui-test.html"],
+     "validationPassed": true | false,
+     "stateUpdated": true | false,
+     "commitHash": "abc123",
+     "error": "..." (if status == "error")
+   }
+   ```
 
-styling:
-  colors:
-    background: "#2a2a2a"
-    foreground: "#ffffff"
-    accent: "#ff6b35"
-  fonts:
-    primary: "Arial, sans-serif"
+6. **Handle result:**
+   - If status == "error": Present error menu (retry/manual fix/cancel)
+   - If validationPassed == false: Agent already retried, present error menu
+   - If stateUpdated == false: Log warning (orchestrator will verify later)
+   - If status == "success": Continue to Phase 5.5
+
+**Iteration support:**
+- If user chose "Iterate" in Phase 5.5, invoke NEW ui-design-agent with:
+  - Previous version number (for reference)
+  - Refinement feedback from user
+  - Incremented version number (v2, v3, etc.)
+</delegation_protocol>
+
+**Error menu (if agent fails):**
 ```
+✗ Design generation failed: [error message]
 
-**See:** `assets/ui-yaml-template.yaml` for complete template with all control types.
+What would you like to do?
 
-## Phase 5: Generate Browser Test HTML
+1. Retry - Invoke ui-design-agent again
+2. Manual fix - I'll create files myself
+3. Debug - Show agent output
+4. Cancel - Stop workflow
+5. Other
 
-**Create:** `plugins/[Name]/.ideas/mockups/v[N]-ui-test.html`
-
-**Purpose:** Test UI in browser for rapid design iteration.
-
-**Features:**
-
-- Standalone HTML file (open directly in browser)
-- Mock parameter state (simulates C++ backend)
-- Interactive controls (test bindings)
-- Console logging (verify parameter messages)
-- Same visual as production will be
-- No JUCE/WebView required
-
-**Critical WebView Constraints** (enforced in Phase 5.3):
-- ❌ NO viewport units: `100vh`, `100vw`, `100dvh`, `100svh` (causes blank screens)
-- ✅ REQUIRED: `html, body { height: 100%; }` for full-screen layouts
-- ✅ REQUIRED: `user-select: none` for native plugin feel
-- ✅ REQUIRED: Context menu disabled via JavaScript `contextmenu` event
-
-**Why these matter**: Viewport units cause blank screens in JUCE WebView (JUCE 8 limitation). Missing user-select allows text selection (breaks plugin feel). Without context menu disable, right-click shows browser menu (not plugin-appropriate).
-
-**See:** `references/ui-design-rules.md` for complete constraint list and validation patterns, and `references/browser-testing.md` for testing guidelines
-
-## Phase 5.3: Validate WebView Constraints (Before Decision Menu)
-
-<requirement type="validation" blocking="true">
-<validation_checklist>
-**Execute validation before Phase 5.5:**
-
-```bash
-# Store validation results
-VALIDATION_PASSED=true
-
-# Check 1: No viewport units
-if grep -q "100vh\|100vw\|100dvh\|100svh" v[N]-ui-test.html; then
-    echo "❌ FAIL: Forbidden viewport units found"
-    VALIDATION_PASSED=false
-fi
-
-# Check 2: Required html/body height
-if ! grep -q "html, body.*height: 100%" v[N]-ui-test.html; then
-    echo "❌ FAIL: Missing required html/body height: 100%"
-    VALIDATION_PASSED=false
-fi
-
-# Check 3: Native feel CSS
-if ! grep -q "user-select: none" v[N]-ui-test.html; then
-    echo "❌ FAIL: Missing user-select: none"
-    VALIDATION_PASSED=false
-fi
-
-# Check 4: Context menu disabled
-if ! grep -q 'contextmenu.*preventDefault' v[N]-ui-test.html; then
-    echo "❌ FAIL: Context menu not disabled"
-    VALIDATION_PASSED=false
-fi
-
-# Gate decision
-if [ "$VALIDATION_PASSED" = false ]; then
-    echo "Regenerating mockup with corrections..."
-    # Return to Phase 4 with fixes
-else
-    echo "✅ All WebView constraints validated"
-    # Proceed to Phase 5.5
-fi
+Choose (1-5): _
 ```
-
-**Failure handling:**
-IF any check fails THEN:
-  1. Log specific violation
-  2. Regenerate mockup with corrections
-  3. Re-run validation
-  4. Do NOT proceed to Phase 5.5 until ALL checks pass
-</validation_checklist>
-</requirement>
-
-**See:** `references/ui-design-rules.md` for complete validation rules
-
-## Phase 5.4: Auto-Open in Browser
-
-**After validation passes, automatically open the test HTML in browser.**
-
-```bash
-open plugins/[PluginName]/.ideas/mockups/v[N]-ui-test.html
-```
-
-This allows immediate visual inspection without requiring user to manually navigate and open the file.
-
-**Note:** Uses `open` command (macOS). On other platforms, adjust command accordingly (e.g., `xdg-open` on Linux, `start` on Windows).
-
-## Phase 5.45: Version Control Checkpoint
-
-**CRITICAL: Commit each UI version immediately after generation.**
-
-**After Phase 5.4 completes (YAML + test HTML generated and validated):**
-
-```bash
-cd plugins/[PluginName]/.ideas/mockups
-git add v[N]-ui.yaml v[N]-ui-test.html
-git commit -m "feat([PluginName]): UI mockup v[N] (design iteration)"
-```
-
-**Why commit at this point:**
-- Preserves design history between iterations
-- Each version is recoverable
-- Enables A/B comparison of different designs
-- Atomic commits per iteration (not batched)
-
-**Update workflow state (if in workflow context):**
-
-```bash
-if [ -f "plugins/[PluginName]/.continue-here.md" ]; then
-    # Update version tracking
-    sed -i '' "s/latest_mockup_version: .*/latest_mockup_version: [N]/" plugins/[PluginName]/.continue-here.md
-    # Keep mockup_finalized: false until user chooses "finalize"
-    git add plugins/[PluginName]/.continue-here.md
-    git commit --amend --no-edit
-fi
-```
-
-**State tracking in `.continue-here.md`:**
-
-```markdown
-current_stage: 0
-stage_0_status: ui_design_in_progress
-latest_mockup_version: 2
-mockup_finalized: false
-```
-
-**Only proceed to Phase 5.5 after successful commit.**
 
 ---
 
@@ -715,379 +622,191 @@ These prerequisites apply to Phases 6, 7, 8, 9, and 10. Verify guard before proc
 
 ---
 
-## Phase 6: Generate Production HTML (After Finalization Only)
+## Phase 6-10.5: Dispatch ui-finalization-agent
 
-**Create:** `plugins/[Name]/.ideas/mockups/v[N]-ui.html`
+**Invoke subagent via Task tool to generate implementation files (5 files + parameter-spec.md if v1).**
 
-**This HTML IS the plugin UI.** It will be copied to `Source/ui/public/index.html` during Stage 5 (GUI).
+<delegation_protocol>
+**Before invocation:**
 
-### Generation Strategy
+1. **Read finalized design files:**
+   - v[N]-ui.yaml (finalized YAML specification)
+   - v[N]-ui-test.html (finalized test HTML)
+   - parameter-spec.md (if exists - for v2+)
 
-**Base template:** `assets/webview-templates/index-template.html`
+2. **Detect if parameter-spec.md generation needed:**
+   ```bash
+   PARAM_SPEC_PATH="plugins/${PLUGIN_NAME}/.ideas/parameter-spec.md"
+   if [ ! -f "$PARAM_SPEC_PATH" ]; then
+     GENERATE_PARAM_SPEC=true
+     # Check for draft
+     DRAFT_PATH="plugins/${PLUGIN_NAME}/.ideas/parameter-spec-draft.md"
+     if [ -f "$DRAFT_PATH" ]; then
+       DRAFT_EXISTS=true
+     fi
+   fi
+   ```
 
-**Key replacements:**
+3. **Construct prompt with all context:**
+   - Plugin name
+   - Version number (v[N])
+   - Finalized YAML path
+   - Finalized HTML path
+   - parameter-spec.md path OR flag to generate it
+   - Draft path (if exists and param-spec.md needed)
 
-1. **{{PLUGIN_NAME}}** → Plugin name from creative brief
-2. **{{CONTROL_HTML}}** → Generate controls from finalized YAML/HTML
-3. **{{PARAMETER_BINDINGS}}** → Generate JavaScript bindings for each parameter
+4. **Invoke ui-finalization-agent:**
+   ```
+   Task tool with:
+   - subagent_type: "ui-finalization-agent"
+   - description: "Generate implementation files for mockup v[N]"
+   - prompt: [constructed prompt with contracts]
+   ```
 
-### Parameter ID Extraction
+5. **Wait for JSON report:**
+   ```json
+   {
+     "status": "success" | "error",
+     "phase": "implementation-scaffolding",
+     "version": N,
+     "filesCreated": [
+       "v[N]-ui.html",
+       "v[N]-PluginEditor-TEMPLATE.h",
+       "v[N]-PluginEditor-TEMPLATE.cpp",
+       "v[N]-CMakeLists-SNIPPET.txt",
+       "v[N]-integration-checklist.md",
+       "parameter-spec.md" (if v1 only)
+     ],
+     "parameterSpecGenerated": true | false,
+     "draftConflictDetected": true | false,
+     "stateUpdated": true | false,
+     "commitHash": "abc123",
+     "error": "..." (if status == "error")
+   }
+   ```
 
-Parse finalized HTML from Phase 5 for JUCE parameter bindings:
+6. **Handle result:**
+   - If draftConflictDetected == true: Agent presented resolution menu, user handled it
+   - If status == "error": Present error menu (retry/manual fix/cancel)
+   - If stateUpdated == false: Log warning
+   - If status == "success": Continue to Phase 10.7 (completion menu)
+</delegation_protocol>
 
-```javascript
-// Extract parameter IDs from JavaScript code patterns
-const parameterIds = [];
-
-// Pattern 1: Juce.getSliderState("PARAM_ID")
-const sliderMatches = html.matchAll(/Juce\.getSliderState\("([^"]+)"\)/g);
-for (const match of sliderMatches) {
-    parameterIds.push({ id: match[1], type: "slider" });
-}
-
-// Pattern 2: Juce.getToggleButtonState("PARAM_ID")
-const toggleMatches = html.matchAll(/Juce\.getToggleButtonState\("([^"]+)"\)/g);
-for (const match of toggleMatches) {
-    parameterIds.push({ id: match[1], type: "toggle" });
-}
-
-// Pattern 3: Juce.getComboBoxState("PARAM_ID")
-const comboMatches = html.matchAll(/Juce\.getComboBoxState\("([^"]+)"\)/g);
-for (const match of comboMatches) {
-    parameterIds.push({ id: match[1], type: "combo" });
-}
+**Error menu (if agent fails):**
 ```
+✗ Implementation file generation failed: [error message]
 
-**Use extracted IDs to generate matching relay/attachment code in C++.**
+What would you like to do?
 
-### Critical Constraints
-
-**Enforce from `references/ui-design-rules.md`:**
-
-- ❌ NO viewport units: `100vh`, `100vw`, `100dvh`, `100svh`
-- ✅ REQUIRED: `html, body { height: 100%; }`
-- ✅ REQUIRED: `user-select: none` (native feel)
-- ✅ REQUIRED: Context menu disabled in JavaScript
-
-**See:** `references/ui-design-rules.md` for complete constraints
-
-## Phase 7: Generate C++ Boilerplate (After Finalization Only)
-
-**Create:**
-- `plugins/[Name]/.ideas/mockups/v[N]-PluginEditor-TEMPLATE.h`
-- `plugins/[Name]/.ideas/mockups/v[N]-PluginEditor-TEMPLATE.cpp`
-
-**Note**: These files are REFERENCE TEMPLATES for gui-agent, not copy-paste files. gui-agent uses these as starting point during Stage 5.
-
-**Purpose:** WebView integration boilerplate for Stage 5 (GUI).
-
-**Generation strategy:** Use template replacement from `references/cpp-boilerplate-generation.md`.
-
-**Required inputs:**
-- Plugin name (PascalCase and UPPERCASE)
-- Current version number [N]
-- Window dimensions from YAML
-- Parameter IDs from Phase 6 extraction
-
-**Key templates:**
-- Header: `assets/webview-templates/PluginEditor-webview.h`
-- Implementation: `assets/webview-templates/PluginEditor-webview.cpp`
-
-**Critical patterns:**
-- Generate relay declarations for each parameter (slider/toggle/combo)
-- Generate matching attachment declarations
-- **⚠️ CRITICAL:** Enforce member order (relays → webView → attachments) to prevent release build crashes
-- Generate relay creation, WebView options, and attachment creation code
-- Generate resource provider mappings for all UI files
-- Extract window size from YAML
-
-**See:** `references/cpp-boilerplate-generation.md` for complete template details and variable mapping
-
-## Phase 8: Generate Build Configuration (After Finalization Only)
-
-**Create:** `plugins/[Name]/.ideas/mockups/v[N]-CMakeLists-SNIPPET.txt`
-
-**Note**: This snippet is appended to CMakeLists.txt by gui-agent, not used standalone.
-
-**Purpose:** CMake snippet to enable WebView support in JUCE.
-
-**IMPORTANT:** This is a SNIPPET to append to existing plugin CMakeLists.txt, NOT a complete CMakeLists.txt file.
-
-**Generation strategy:** Use template from `references/cmake-generation.md`.
-
-**Required inputs:**
-- Plugin name (PascalCase)
-- Current version number [N]
-
-**Base template:** `assets/webview-templates/CMakeLists-webview-snippet.cmake`
-
-**See:** `references/cmake-generation.md` for complete template structure and integration instructions
-
-## Phase 9: Generate Integration Checklist (After Finalization Only)
-
-**Create:** `plugins/[Name]/.ideas/mockups/v[N]-integration-checklist.md`
-
-**Purpose:** Step-by-step guide to integrate UI into plugin during Stage 5.
-
-### Checklist Structure
-
-**Base template:** `assets/integration-checklist-template.md`
-
-**WebView-specific steps:**
-
-```markdown
-## Stage 5 (GUI) Integration Steps
-
-### 1. Copy UI Files
-- [ ] Copy v[N]-ui.html to Source/ui/public/index.html
-- [ ] Copy JUCE frontend library to Source/ui/public/js/juce/index.js
-- [ ] Copy any additional resources (CSS, images, etc.)
-
-### 2. Update PluginEditor Files
-- [ ] Replace PluginEditor.h with v[N]-PluginEditor.h
-- [ ] Verify member order: relays → webView → attachments
-- [ ] Replace PluginEditor.cpp with v[N]-PluginEditor.cpp
-- [ ] Verify initialization order matches member order
-
-### 3. Update CMakeLists.txt
-- [ ] Add juce_add_binary_data for UI resources
-- [ ] Link ${PLUGIN_NAME}_UIResources to plugin
-- [ ] Add JUCE_WEB_BROWSER=1 definition
-- [ ] Add platform-specific config (if cross-platform)
-
-### 4. Build and Test (Debug)
-- [ ] Build succeeds without warnings
-- [ ] Standalone loads WebView (not blank)
-- [ ] Right-click → Inspect works
-- [ ] Console shows no JavaScript errors
-- [ ] window.__JUCE__ object exists
-- [ ] Parameter state objects accessible
-
-### 5. Build and Test (Release)
-- [ ] Release build succeeds without warnings
-- [ ] Release build runs (tests member order logic)
-- [ ] No crashes on plugin reload (test 10 times)
-
-### 6. Test Parameter Binding
-- [ ] Moving UI slider changes audio (verify in DAW)
-- [ ] Changing parameter in DAW updates UI
-- [ ] Parameter values persist after reload
-- [ ] Multiple parameters sync independently
-
-### 7. WebView-Specific Validation
-- [ ] Verify member order in PluginEditor.h (relays → webView → attachments)
-- [ ] Test resource provider returns all files (no 404 in console)
-- [ ] Verify parameter binding (automation/preset recall)
-- [ ] Test in Debug and Release builds
-- [ ] Check for crashes on plugin close (reload 10 times)
-- [ ] CSS does NOT use viewport units (100vh, 100vw)
-- [ ] Native feel CSS present (user-select: none)
-```
-
-**See:** `assets/integration-checklist-template.md` for full template
-
-## Phase 10: Finalize parameter-spec.md (After Finalization Only)
-
-**Prerequisites:**
-- This is the first mockup version (v1 only)
-
-**Version check:**
-```bash
-# Only generate parameter-spec.md for v1
-if [ "$LATEST_VERSION" != "1" ]; then
-  echo "ℹ Skipping parameter-spec.md (already exists from v1)"
-  exit 0
-fi
-```
-
-**If this is the first UI mockup (v1):**
-
-<draft_validation_gate>
-**CRITICAL: Check for existing parameter-spec-draft.md before generating full spec.**
-
-```bash
-DRAFT_PATH="plugins/${PLUGIN_NAME}/.ideas/parameter-spec-draft.md"
-
-if [ -f "$DRAFT_PATH" ]; then
-  echo "ℹ Draft parameters found - validating consistency..."
-  # Proceed to consistency validation
-else
-  echo "ℹ No draft found - generating full spec from mockup"
-  # Skip to generation
-fi
-```
-
-**If draft exists, validate consistency:**
-
-1. Parse draft parameters (IDs, types, ranges)
-2. Parse mockup parameters (from YAML controls)
-3. Compare parameter lists:
-
-```bash
-# Pseudocode for consistency check
-DRAFT_PARAMS=$(parse_draft_parameters "$DRAFT_PATH")
-MOCKUP_PARAMS=$(parse_mockup_parameters "v1-ui.yaml")
-
-MISSING_FROM_MOCKUP=()
-EXTRA_IN_MOCKUP=()
-
-for param in $DRAFT_PARAMS; do
-  if ! contains "$MOCKUP_PARAMS" "$param"; then
-    MISSING_FROM_MOCKUP+=("$param")
-  fi
-done
-
-for param in $MOCKUP_PARAMS; do
-  if ! contains "$DRAFT_PARAMS" "$param"; then
-    EXTRA_IN_MOCKUP+=("$param")
-  fi
-done
-
-if [ ${#MISSING_FROM_MOCKUP[@]} -gt 0 ] || [ ${#EXTRA_IN_MOCKUP[@]} -gt 0 ]; then
-  # Mismatch detected - present resolution menu
-  CONFLICT_DETECTED=true
-else
-  # No mismatch - proceed to generation
-  CONFLICT_DETECTED=false
-fi
-```
-
-**If mismatch detected, present resolution menu:**
-
-```
-⚠️ Parameter mismatch between draft and mockup
-
-Draft specified but missing from mockup:
-- filterCutoff (Float, 20-20000 Hz)
-- resonance (Float, 0-1)
-
-Mockup includes but not in draft:
-- outputGain (Float, -60 to 12 dB)
-
-Resolution options:
-
-1. Update mockup - Add missing parameters to UI design (return to Phase 4)
-2. Update draft - Remove obsolete parameters from draft (regenerate draft)
-3. Merge both - Include all parameters from both sources
-4. Manual resolution - I'll fix this myself (pause workflow)
+1. Retry - Invoke ui-finalization-agent again
+2. Manual fix - I'll create files myself
+3. Debug - Show agent output
+4. Cancel - Stop workflow
 5. Other
 
 Choose (1-5): _
 ```
 
-**Handle resolution choices:**
+---
 
-- **Option 1:** Return to Phase 4 with instructions to add missing parameters
-- **Option 2:** Regenerate draft with only parameters present in mockup, then continue
-- **Option 3:** Generate full spec with union of both parameter sets (warn about possible duplication)
-- **Option 4:** Pause workflow, wait for manual fix
-- **Option 5:** Collect custom input
+## Orchestration Protocol
 
-**After resolution (or if no conflict), proceed to generation:**
-</draft_validation_gate>
+**Pure orchestrator pattern - delegates file generation to subagents.**
 
-**Create:** `plugins/[Name]/.ideas/parameter-spec.md`
+<orchestration_rules enforcement_level="STRICT">
+  <delegation_rule id="no-direct-file-generation" violation="IMMEDIATE_STOP">
+    This skill NEVER generates mockup files directly.
+    ALL file generation delegated to subagents via Task tool.
 
-**Purpose:** Lock parameter specification for implementation. This becomes the **immutable contract** for all subsequent stages.
+    **Delegation sequence:**
+    1. Orchestrator: Gather requirements (Phases 0-3.5)
+    2. Orchestrator: Invoke ui-design-agent via Task tool
+    3. Agent: Generate YAML + test HTML, commit, return JSON report
+    4. Orchestrator: Parse JSON report, present Phase 5.5 menu
+    5. If iterate: Orchestrator invokes NEW ui-design-agent instance
+    6. If finalize: Orchestrator runs design-sync validation (Phase 5.6)
+    7. Orchestrator: Invoke ui-finalization-agent via Task tool
+    8. Agent: Generate 5 implementation files, commit, return JSON report
+    9. Orchestrator: Parse JSON report, present completion menu (Phase 10.7)
 
-**Extract from YAML (and merge with draft if exists):**
+    <enforcement>
+      IF orchestrator attempts to generate files directly:
+        STOP execution
+        DISPLAY error: "File generation must be delegated to subagents. Use Task tool."
+    </enforcement>
+  </delegation_rule>
 
-```markdown
-## Total Parameter Count
+  <state_management_protocol>
+    **Subagents handle their own state updates:**
+    - ui-design-agent updates .continue-here.md with version tracking
+    - ui-finalization-agent updates .continue-here.md with finalization status
+    - Both agents commit their changes before returning
 
-**Total:** 5 parameters
+    **Orchestrator verifies stateUpdated flag:**
+    - Check JSON report stateUpdated field
+    - If false: Log warning and offer manual state recovery menu
+    - If true: Proceed to next phase
 
-## Parameter Definitions
+    **State recovery menu (if stateUpdated == false):**
+    ```
+    ⚠️ Agent did not update state files
 
-### threshold
-- **Type:** Float
-- **Range:** -60.0 to 0.0 dB
-- **Default:** -20.0
-- **Skew Factor:** linear
-- **UI Control:** Rotary knob, center-top position
-- **DSP Usage:** Compressor threshold level
-```
+    What would you like to do?
 
-**See:** `assets/parameter-spec-template.md`
+    1. Verify state - Check if update actually happened
+    2. Manual update - I'll fix .continue-here.md myself
+    3. Continue anyway - State not critical for this step
+    4. Other
 
-### Parameter ID Naming Convention
+    Choose (1-4): _
+    ```
+  </state_management_protocol>
 
-Parameter IDs generated in YAML must follow these rules:
-- **Lowercase only**: `threshold` not `Threshold`
-- **snake_case for multi-word**: `attack_time` not `attackTime` or `AttackTime`
-- **Alphanumeric + underscore**: No spaces, hyphens, or special chars
-- **Max 32 characters**: Keep concise for readability
-- **Valid C++ identifier**: Must compile in PluginProcessor.cpp
+  <iteration_protocol>
+    **Each iteration runs in fresh agent context:**
+    - User chooses "Iterate" in Phase 5.5
+    - Orchestrator collects refinement feedback
+    - Orchestrator invokes NEW ui-design-agent with:
+      - Previous version context (for reference)
+      - Refinement requirements
+      - Incremented version number (v2, v3, etc.)
+    - NEW agent has no accumulated context from previous iterations
+    - This prevents context window bloat during iterative design
 
-**Examples**:
-- ✓ `threshold`, `ratio`, `attack_time`, `release_ms`
-- ✗ `Threshold`, `attack-time`, `release (ms)`, `really_long_parameter_name_over_32_chars`
+    **Why fresh context matters:**
+    - After 4-5 iterations, context window fills and blocks progression
+    - Fresh agent context keeps each iteration lightweight
+    - Orchestrator maintains conversation history, agent does not
+  </iteration_protocol>
 
-<state_requirement>
-<commit_protocol phase="finalization">
-## Phase 10.5: Finalization Commit
+  <error_handling_protocol>
+    **Agent failures:**
+    - Agent returns status == "error" in JSON report
+    - Orchestrator presents error menu with options:
+      1. Retry (invoke agent again with same prompt)
+      2. Manual fix (user creates files themselves)
+      3. Debug (show full agent output)
+      4. Cancel (stop workflow)
 
-**MUST commit all implementation files and update workflow state.**
+    **Validation failures:**
+    - Agent returns validationPassed == false
+    - Agent already attempted retry internally
+    - Orchestrator presents error menu (same as above)
 
-**Files to commit:**
-- All 7 mockup files (v[N]-*.{html,yaml,h,cpp,txt,md})
-- parameter-spec.md (if v1 only)
-- .continue-here.md (workflow state)
+    **State update failures:**
+    - Agent returns stateUpdated == false
+    - Not blocking - orchestrator can continue
+    - Present state recovery menu (see above)
+  </error_handling_protocol>
+</orchestration_rules>
 
-**After Phase 10 completes (all 7 files generated):**
-
-```bash
-cd plugins/[PluginName]/.ideas/mockups
-git add v[N]-ui.html v[N]-PluginEditor.h v[N]-PluginEditor.cpp v[N]-CMakeLists.txt v[N]-integration-checklist.md
-
-# If parameter-spec.md was created (v1 only)
-if [ -f "../parameter-spec.md" ]; then
-    git add ../parameter-spec.md
-fi
-
-git commit -m "feat([PluginName]): UI mockup v[N] finalized (implementation files)"
-```
-
-**State updates required:**
-```bash
-# Update .continue-here.md
-sed -i '' "s/mockup_finalized: .*/mockup_finalized: true/" .continue-here.md
-sed -i '' "s/finalized_version: .*/finalized_version: [N]/" .continue-here.md
-sed -i '' "s/stage_0_status: .*/stage_0_status: ui_design_complete/" .continue-here.md
-```
-
-**Verification:**
-- [ ] Git commit succeeded
-- [ ] .continue-here.md updated
-- [ ] mockup_finalized: true
-- [ ] stage_0_status: ui_design_complete
-
-ONLY proceed to "After Completing All Phases" menu if verification passes.
-
-**Updated state in `.continue-here.md`:**
-
-```markdown
-current_stage: 0
-stage_0_status: ui_design_complete
-latest_mockup_version: 2
-mockup_finalized: true
-finalized_version: 2
-```
-
-**Why this matters:**
-- Marks design phase as complete
-- Enables `/continue` to resume at Stage 1
-- Records which version was finalized (if multiple exist)
-- Atomic commit of all implementation files
-</commit_protocol>
-</state_requirement>
-
-</critical_sequence>
-</conditional_execution>
+---
 
 ## After Completing All Phases
 
-Present completion menu after all 7 files generated.
+**Phase 10.7: Completion Menu**
+
+Present completion menu after ui-finalization-agent successfully returns.
 
 **Menu format and option routing:** See `references/decision-menus.md#completion-menu`
 
@@ -1133,16 +852,23 @@ Present completion menu after all 7 files generated.
 - `plugin-improve` skill → When redesigning existing plugin UI
 - Natural language: "Design UI for [PluginName]", "Create mockup for compressor"
 
-**Invokes:**
+**ALWAYS invokes (via Task tool):**
 
-- (None - terminal skill that generates files only)
+- `ui-design-agent` subagent (Phase 4-5.45) - REQUIRED for design iteration
+- `ui-finalization-agent` subagent (Phase 6-10.5) - REQUIRED for implementation files
+- Never generates files directly - orchestration only
 
-**Creates:**
+**Also invokes:**
+
+- `ui-template-library` skill (if user saves aesthetic)
+- `design-sync` skill (Phase 5.6 automatic validation before finalization)
+
+**Creates (via subagents):**
 
 - `plugins/[Name]/.ideas/mockups/v[N]-*.{yaml,html,h,cpp,txt,md}` (7 files)
 - `plugins/[Name]/.ideas/parameter-spec.md` (if v1 and doesn't exist)
 
-**Updates:**
+**Updates (via subagents):**
 
 - `PLUGINS.md` → Mark UI designed (if part of workflow)
 - `.continue-here.md` → Update workflow state (if part of workflow)

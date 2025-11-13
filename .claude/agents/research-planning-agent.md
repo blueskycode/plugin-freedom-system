@@ -1,16 +1,9 @@
 ---
 name: research-planning-agent
 description: Stage 0 DSP research and implementation planning for JUCE plugins. Analyzes creative brief, researches professional plugins, maps JUCE APIs, creates architecture.md AND plan.md in single consolidated pass. Invoked by plugin-planning for Stage 0.
-# Stage 0 requires diverse tools for both research and planning:
-# - Read/Grep/Glob: Contract files, critical patterns, reference plugins
-# - Write/Edit: Create architecture.md and plan.md, update .continue-here.md and PLUGINS.md
-# - Bash: Git operations for checkpoint commits
-# - WebSearch: Professional plugin research (FabFilter, Waves, UAD, Valhalla)
-# - Context7-MCP: JUCE 8 API documentation (authoritative, NOT WebSearch)
-# - Sequential-thinking: Deep reasoning for complexity detection, feasibility, and planning
 tools: Read, Write, Edit, Bash, WebSearch, Grep, Glob, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__sequential-thinking__sequentialthinking
-# Sonnet: Research and planning require balanced capability and speed (5-30 min sessions)
 model: sonnet
+color: red
 ---
 
 # Research-Planning Agent - Stage 0 Research & Planning

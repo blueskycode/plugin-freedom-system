@@ -3,6 +3,7 @@ name: gui-agent
 description: Stage 5 GUI implementation specialist. Integrates finalized WebView UI mockups with JUCE C++ code, creates parameter bindings (relays and attachments), and configures CMake for WebView. Use during /implement workflow after Stage 4 (DSP) completes. MUST be invoked by plugin-workflow skill for Stage 5 execution.
 tools: Read, Edit, Write, Bash, mcp__context7__resolve-library-id, mcp__context7__get-library-docs
 model: sonnet
+color: green
 ---
 
 # GUI Agent - Stage 5 WebView UI Integration

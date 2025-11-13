@@ -1,12 +1,9 @@
 ---
 name: validation-agent
 description: |
-  Independent semantic validator. MUST BE USED after each stage completion
-  (0-6) to verify quality, design decisions, and JUCE best practices.
-  Automatically invoke for complexity 4+ or when thorough review needed.
-  Provides advisory feedback on creative intent alignment.
 tools: Read, Grep, Bash
 model: opus
+color: blue
 ---
 
 # Validation Subagent
