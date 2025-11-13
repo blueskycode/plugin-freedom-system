@@ -144,15 +144,22 @@ Files must pass WebView constraint validation before returning.
 
 **Before ANY generation, read:**
 
-`ui-mockup/references/ui-design-rules.md`
-
-This file contains non-negotiable WebView constraints that prevent runtime failures. Verify your mockup matches these rules BEFORE generating files.
+1. `ui-mockup/references/ui-design-rules.md` - WebView constraints
+2. `ui-mockup/references/layout-validation.md` - Layout mathematics
 
 **Key constraints for mockup generation:**
-1. ❌ NO viewport units: `100vh`, `100vw`, `100dvh`, `100svh` (causes blank screens)
-2. ✅ REQUIRED: `html, body { height: 100%; }` for full-screen layouts
-3. ✅ REQUIRED: `user-select: none` for native plugin feel
-4. ✅ REQUIRED: Context menu disabled via JavaScript `contextmenu` event
+
+**From ui-design-rules.md (WebView):**
+1. ❌ NO viewport units: `100vh`, `100vw`, `100dvh`, `100svh`
+2. ✅ REQUIRED: `html, body { height: 100%; }`
+3. ✅ REQUIRED: `user-select: none`
+4. ✅ REQUIRED: Context menu disabled
+
+**From layout-validation.md (Layout Math):**
+1. ✅ All elements within bounds: `x + width <= window_width`, `y + height <= window_height`
+2. ✅ No overlaps: Bounding box collision check
+3. ✅ Minimum usable sizes: Sliders 100px, knobs 40px, buttons 60×24px
+4. ✅ Minimum spacing: 10px between controls, 15px from edges
 </required_reading>
 
 <workflow>
@@ -364,7 +371,206 @@ styling:
 - NO viewport units (100vh, 100vw forbidden)
 - html, body { height: 100%; } REQUIRED
 
-### 4. Validate WebView Constraints
+### 4.5. Validate Layout Mathematics
+
+**Execute layout validation after generating YAML, before generating HTML.**
+
+**Why before HTML:** If YAML layout is broken, no point generating HTML. Fail fast.
+
+**Reference:** See `.claude/skills/ui-mockup/references/layout-validation.md` Section 3 (Validation Scripts) for algorithms.
+
+#### Implementation:
+
+```bash
+VALIDATION_PASSED=true
+ERRORS=()
+WARNINGS=()
+
+# Parse YAML for validation
+WINDOW_WIDTH=$(yq eval '.window.width' v${VERSION}-ui.yaml)
+WINDOW_HEIGHT=$(yq eval '.window.height' v${VERSION}-ui.yaml)
+CONTROL_COUNT=$(yq eval '.controls | length' v${VERSION}-ui.yaml)
+
+echo "Validating layout: ${WINDOW_WIDTH}×${WINDOW_HEIGHT} with ${CONTROL_COUNT} controls"
+
+# Validation 1: Bounds containment
+# For each control in YAML, check: x + width <= window_width, y + height <= window_height
+for i in $(seq 0 $((CONTROL_COUNT - 1))); do
+    CTRL_ID=$(yq eval ".controls[$i].id" v${VERSION}-ui.yaml)
+    CTRL_X=$(yq eval ".controls[$i].position.x" v${VERSION}-ui.yaml)
+    CTRL_Y=$(yq eval ".controls[$i].position.y" v${VERSION}-ui.yaml)
+    CTRL_W=$(yq eval ".controls[$i].size.width // .controls[$i].size.diameter // 80" v${VERSION}-ui.yaml)
+    CTRL_H=$(yq eval ".controls[$i].size.height // .controls[$i].size.diameter // 80" v${VERSION}-ui.yaml)
+
+    # Check right edge
+    RIGHT_EDGE=$((CTRL_X + CTRL_W))
+    if [ $RIGHT_EDGE -gt $WINDOW_WIDTH ]; then
+        echo "❌ FAIL: $CTRL_ID overflows right edge ($RIGHT_EDGE > $WINDOW_WIDTH)"
+        VALIDATION_PASSED=false
+        ERRORS+=("Bounds violation: $CTRL_ID overflows right edge by $((RIGHT_EDGE - WINDOW_WIDTH))px")
+    fi
+
+    # Check bottom edge
+    BOTTOM_EDGE=$((CTRL_Y + CTRL_H))
+    if [ $BOTTOM_EDGE -gt $WINDOW_HEIGHT ]; then
+        echo "❌ FAIL: $CTRL_ID overflows bottom edge ($BOTTOM_EDGE > $WINDOW_HEIGHT)"
+        VALIDATION_PASSED=false
+        ERRORS+=("Bounds violation: $CTRL_ID overflows bottom edge by $((BOTTOM_EDGE - WINDOW_HEIGHT))px")
+    fi
+
+    # Check left/top edges
+    if [ $CTRL_X -lt 0 ]; then
+        ERRORS+=("Bounds violation: $CTRL_ID extends past left edge (x=$CTRL_X)")
+        VALIDATION_PASSED=false
+    fi
+    if [ $CTRL_Y -lt 0 ]; then
+        ERRORS+=("Bounds violation: $CTRL_ID extends past top edge (y=$CTRL_Y)")
+        VALIDATION_PASSED=false
+    fi
+done
+
+# Validation 2: Overlap detection
+# For each pair of controls, check bounding box collision
+for i in $(seq 0 $((CONTROL_COUNT - 1))); do
+    CTRL1_ID=$(yq eval ".controls[$i].id" v${VERSION}-ui.yaml)
+    CTRL1_X=$(yq eval ".controls[$i].position.x" v${VERSION}-ui.yaml)
+    CTRL1_Y=$(yq eval ".controls[$i].position.y" v${VERSION}-ui.yaml)
+    CTRL1_W=$(yq eval ".controls[$i].size.width // .controls[$i].size.diameter // 80" v${VERSION}-ui.yaml)
+    CTRL1_H=$(yq eval ".controls[$i].size.height // .controls[$i].size.diameter // 80" v${VERSION}-ui.yaml)
+
+    for j in $(seq $((i + 1)) $((CONTROL_COUNT - 1))); do
+        CTRL2_ID=$(yq eval ".controls[$j].id" v${VERSION}-ui.yaml)
+        CTRL2_X=$(yq eval ".controls[$j].position.x" v${VERSION}-ui.yaml)
+        CTRL2_Y=$(yq eval ".controls[$j].position.y" v${VERSION}-ui.yaml)
+        CTRL2_W=$(yq eval ".controls[$j].size.width // .controls[$j].size.diameter // 80" v${VERSION}-ui.yaml)
+        CTRL2_H=$(yq eval ".controls[$j].size.height // .controls[$j].size.diameter // 80" v${VERSION}-ui.yaml)
+
+        # Bounding box collision: rectangles overlap if ALL conditions true
+        if [ $CTRL1_X -lt $((CTRL2_X + CTRL2_W)) ] && \
+           [ $((CTRL1_X + CTRL1_W)) -gt $CTRL2_X ] && \
+           [ $CTRL1_Y -lt $((CTRL2_Y + CTRL2_H)) ] && \
+           [ $((CTRL1_Y + CTRL1_H)) -gt $CTRL2_Y ]; then
+            echo "❌ FAIL: $CTRL1_ID overlaps $CTRL2_ID"
+            VALIDATION_PASSED=false
+            ERRORS+=("Overlap detected: $CTRL1_ID and $CTRL2_ID occupy same space")
+        fi
+    done
+done
+
+# Validation 3: Minimum usable sizes
+for i in $(seq 0 $((CONTROL_COUNT - 1))); do
+    CTRL_ID=$(yq eval ".controls[$i].id" v${VERSION}-ui.yaml)
+    CTRL_TYPE=$(yq eval ".controls[$i].type" v${VERSION}-ui.yaml)
+    CTRL_W=$(yq eval ".controls[$i].size.width // .controls[$i].size.diameter // 80" v${VERSION}-ui.yaml)
+    CTRL_H=$(yq eval ".controls[$i].size.height // .controls[$i].size.diameter // 80" v${VERSION}-ui.yaml)
+
+    case $CTRL_TYPE in
+        slider)
+            if [ $CTRL_W -lt 100 ] && [ $CTRL_H -lt 100 ]; then
+                echo "❌ FAIL: $CTRL_ID too small (sliders need min 100px length)"
+                VALIDATION_PASSED=false
+                ERRORS+=("Size violation: $CTRL_ID slider too small (${CTRL_W}×${CTRL_H}, need min 100px length)")
+            fi
+            ;;
+        knob)
+            if [ $CTRL_W -lt 40 ] || [ $CTRL_H -lt 40 ]; then
+                echo "❌ FAIL: $CTRL_ID too small (knobs need min 40px diameter)"
+                VALIDATION_PASSED=false
+                ERRORS+=("Size violation: $CTRL_ID knob too small (${CTRL_W}×${CTRL_H}, need min 40px diameter)")
+            fi
+            ;;
+        button)
+            if [ $CTRL_W -lt 60 ] || [ $CTRL_H -lt 24 ]; then
+                echo "❌ FAIL: $CTRL_ID too small (buttons need min 60×24px)"
+                VALIDATION_PASSED=false
+                ERRORS+=("Size violation: $CTRL_ID button too small (${CTRL_W}×${CTRL_H}, need min 60×24px)")
+            fi
+            ;;
+        toggle)
+            if [ $CTRL_W -lt 20 ] || [ $CTRL_H -lt 20 ]; then
+                echo "❌ FAIL: $CTRL_ID too small (toggles need min 20×20px)"
+                VALIDATION_PASSED=false
+                ERRORS+=("Size violation: $CTRL_ID toggle too small (${CTRL_W}×${CTRL_H}, need min 20×20px)")
+            fi
+            ;;
+    esac
+done
+
+# Validation 4: Minimum spacing (warning only, not blocking)
+# Check if controls are too close together (<10px gap)
+for i in $(seq 0 $((CONTROL_COUNT - 1))); do
+    CTRL1_ID=$(yq eval ".controls[$i].id" v${VERSION}-ui.yaml)
+    CTRL1_X=$(yq eval ".controls[$i].position.x" v${VERSION}-ui.yaml)
+    CTRL1_W=$(yq eval ".controls[$i].size.width // .controls[$i].size.diameter // 80" v${VERSION}-ui.yaml)
+
+    for j in $(seq $((i + 1)) $((CONTROL_COUNT - 1))); do
+        CTRL2_ID=$(yq eval ".controls[$j].id" v${VERSION}-ui.yaml)
+        CTRL2_X=$(yq eval ".controls[$j].position.x" v${VERSION}-ui.yaml)
+
+        # Calculate horizontal gap
+        if [ $CTRL1_X -lt $CTRL2_X ]; then
+            GAP=$((CTRL2_X - CTRL1_X - CTRL1_W))
+        else
+            CTRL2_W=$(yq eval ".controls[$j].size.width // .controls[$j].size.diameter // 80" v${VERSION}-ui.yaml)
+            GAP=$((CTRL1_X - CTRL2_X - CTRL2_W))
+        fi
+
+        if [ $GAP -lt 10 ] && [ $GAP -gt 0 ]; then
+            echo "⚠️  WARNING: $CTRL1_ID and $CTRL2_ID only have ${GAP}px gap (recommend min 10px)"
+            WARNINGS+=("Spacing warning: $CTRL1_ID and $CTRL2_ID have ${GAP}px gap (recommend 10px minimum)")
+        fi
+    done
+done
+
+# Gate decision
+if [ "$VALIDATION_PASSED" = false ]; then
+    echo "❌ Layout validation failed - ${#ERRORS[@]} errors found"
+
+    # Return failure JSON report
+    cat > /tmp/validation-failure.json <<EOF
+{
+  "agent": "ui-design-agent",
+  "status": "failure",
+  "outputs": {
+    "plugin_name": "${PLUGIN_NAME}",
+    "version": ${VERSION},
+    "error_type": "layout_validation_failed",
+    "validation_errors": $(printf '%s\n' "${ERRORS[@]}" | jq -R . | jq -s .),
+    "files_created": ["v${VERSION}-ui.yaml"]
+  },
+  "issues": $(printf '%s\n' "${ERRORS[@]}" | jq -R . | jq -s .),
+  "ready_for_next_stage": false,
+  "stateUpdated": false
+}
+EOF
+
+    # Output failure report and exit
+    cat /tmp/validation-failure.json
+    exit 1
+else
+    echo "✅ Layout validation passed"
+
+    if [ ${#WARNINGS[@]} -gt 0 ]; then
+        echo "⚠️  ${#WARNINGS[@]} warnings (non-blocking):"
+        printf '  - %s\n' "${WARNINGS[@]}"
+    fi
+
+    # Proceed to HTML generation (Step 5)
+fi
+```
+
+**If validation fails:**
+- Do NOT generate HTML
+- Do NOT commit files
+- Return failure JSON report immediately
+- Include all validation errors in `issues` array
+
+**If validation passes:**
+- Log success with warnings (if any)
+- Proceed to Step 5 (Generate HTML)
+- Include warnings in final JSON report (non-blocking)
+
+### 5. Validate WebView Constraints
 
 **Execute validation before returning:**
 
@@ -416,7 +622,7 @@ Return failure report with specific violations. Do NOT proceed to commit.
 **If validation passes:**
 Proceed to commit and state update.
 
-### 5. Auto-Open Test HTML in Browser
+### 6. Auto-Open Test HTML in Browser
 
 **After validation passes, automatically open the test HTML in browser.**
 
@@ -431,7 +637,7 @@ This allows immediate visual inspection of the design.
 - Linux: `xdg-open` command
 - Windows: `start` command
 
-### 6. Commit Files to Git
+### 7. Commit Files to Git
 
 **After validation passes, commit both files atomically:**
 
@@ -467,7 +673,7 @@ fi
 
 If commit fails, report in JSON output.
 
-### 7. Update Workflow State (If Workflow Context)
+### 8. Update Workflow State (If Workflow Context)
 
 **Check for workflow context:**
 
@@ -516,7 +722,7 @@ fi
 
 **Orchestrator sets mockup_finalized: true** when user selects "Finalize" in decision menu.
 
-### 8. Calculate Contract Checksums (If Workflow Context)
+### 9. Calculate Contract Checksums (If Workflow Context)
 
 **If creative-brief.md exists, calculate checksum for validation:**
 
@@ -530,7 +736,7 @@ fi
 
 **Purpose:** Design-sync skill validates mockup consistency against brief using checksums.
 
-### 9. Return JSON Report
+### 10. Return JSON Report
 
 After all steps complete, return JSON report to orchestrator.
 
@@ -673,6 +879,8 @@ If state update fails:
     "files_created": ["v1-ui.yaml", "v1-ui-test.html"],
     "parameter_count": 5,
     "window_dimensions": "600x400",
+    "layout_validation_passed": true,
+    "layout_warnings": [],
     "controls": [
       {"id": "threshold", "type": "slider"},
       {"id": "ratio", "type": "slider"},
@@ -706,6 +914,8 @@ If state update fails:
     "parameter_count": 8,
     "window_dimensions": "800x600",
     "resizable": true,
+    "layout_validation_passed": true,
+    "layout_warnings": ["spacing warning: controls A and B have 8px gap"],
     "controls": [
       {"id": "threshold", "type": "slider"},
       {"id": "ratio", "type": "slider"},
@@ -724,7 +934,7 @@ If state update fails:
 }
 ```
 
-**On validation failure:**
+**On WebView validation failure:**
 
 ```json
 {
@@ -741,6 +951,34 @@ If state update fails:
     "WebView constraint violation: viewport units (100vh/100vw) detected",
     "WebView constraint violation: missing html/body height: 100%",
     "WebView constraint violation: context menu not disabled"
+  ],
+  "ready_for_next_stage": false,
+  "stateUpdated": false
+}
+```
+
+**On layout validation failure:**
+
+```json
+{
+  "agent": "ui-design-agent",
+  "status": "failure",
+  "outputs": {
+    "plugin_name": "[PluginName]",
+    "version": 1,
+    "error_type": "layout_validation_failed",
+    "validation_errors": [
+      "Bounds violation: gain overflows right edge by 30px",
+      "Overlap detected: tone and gain occupy same space",
+      "Size violation: bypass button too small (50×20, need min 60×24)"
+    ],
+    "files_created": ["v1-ui.yaml"]
+  },
+  "issues": [
+    "Layout validation failed with 3 errors",
+    "Bounds violation: gain overflows right edge by 30px",
+    "Overlap detected: tone and gain occupy same space",
+    "Size violation: bypass button too small (50×20, need min 60×24)"
   ],
   "ready_for_next_stage": false,
   "stateUpdated": false
