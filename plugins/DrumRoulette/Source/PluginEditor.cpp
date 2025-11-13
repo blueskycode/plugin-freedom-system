@@ -4,13 +4,97 @@
 DrumRouletteAudioProcessorEditor::DrumRouletteAudioProcessorEditor(DrumRouletteAudioProcessor& p)
     : AudioProcessorEditor(&p), processorRef(p)
 {
-    // Create WebView with basic options (Pattern #11 - use std::make_unique)
+    // ========================================================================
+    // STEP 1: Create relays FIRST (Pattern #11)
+    // ========================================================================
+
+    // Slot 1 relays (8 parameters)
+    relay_decay1 = std::make_unique<juce::WebSliderRelay>("DECAY_1");
+    relay_attack1 = std::make_unique<juce::WebSliderRelay>("ATTACK_1");
+    relay_tiltFilter1 = std::make_unique<juce::WebSliderRelay>("TILT_FILTER_1");
+    relay_pitch1 = std::make_unique<juce::WebSliderRelay>("PITCH_1");
+    relay_volume1 = std::make_unique<juce::WebSliderRelay>("VOLUME_1");
+    relay_solo1 = std::make_unique<juce::WebToggleButtonRelay>("SOLO_1");  // Pattern #19
+    relay_mute1 = std::make_unique<juce::WebToggleButtonRelay>("MUTE_1");  // Pattern #19
+    relay_lock1 = std::make_unique<juce::WebToggleButtonRelay>("LOCK_1");  // Pattern #19
+
+    // Slot 2 relays (8 parameters)
+    relay_decay2 = std::make_unique<juce::WebSliderRelay>("DECAY_2");
+    relay_attack2 = std::make_unique<juce::WebSliderRelay>("ATTACK_2");
+    relay_tiltFilter2 = std::make_unique<juce::WebSliderRelay>("TILT_FILTER_2");
+    relay_pitch2 = std::make_unique<juce::WebSliderRelay>("PITCH_2");
+    relay_volume2 = std::make_unique<juce::WebSliderRelay>("VOLUME_2");
+    relay_solo2 = std::make_unique<juce::WebToggleButtonRelay>("SOLO_2");  // Pattern #19
+    relay_mute2 = std::make_unique<juce::WebToggleButtonRelay>("MUTE_2");  // Pattern #19
+    relay_lock2 = std::make_unique<juce::WebToggleButtonRelay>("LOCK_2");  // Pattern #19
+
+    // ========================================================================
+    // STEP 2: Create WebView SECOND with relay options (Pattern #11)
+    // ========================================================================
     webView = std::make_unique<juce::WebBrowserComponent>(
         juce::WebBrowserComponent::Options{}
             .withNativeIntegrationEnabled()  // CRITICAL: Enables JUCE JavaScript library
             .withKeepPageLoadedWhenBrowserIsHidden()
             .withResourceProvider([this](const juce::String& url) { return getResource(url); })
+            // Register all relays (slot 1)
+            .withOptionsFrom(*relay_decay1)
+            .withOptionsFrom(*relay_attack1)
+            .withOptionsFrom(*relay_tiltFilter1)
+            .withOptionsFrom(*relay_pitch1)
+            .withOptionsFrom(*relay_volume1)
+            .withOptionsFrom(*relay_solo1)
+            .withOptionsFrom(*relay_mute1)
+            .withOptionsFrom(*relay_lock1)
+            // Register all relays (slot 2)
+            .withOptionsFrom(*relay_decay2)
+            .withOptionsFrom(*relay_attack2)
+            .withOptionsFrom(*relay_tiltFilter2)
+            .withOptionsFrom(*relay_pitch2)
+            .withOptionsFrom(*relay_volume2)
+            .withOptionsFrom(*relay_solo2)
+            .withOptionsFrom(*relay_mute2)
+            .withOptionsFrom(*relay_lock2)
     );
+
+    // ========================================================================
+    // STEP 3: Create attachments LAST (Pattern #11, #12)
+    // ========================================================================
+
+    // Slot 1 attachments (Pattern #12: 3 parameters - parameter, relay, nullptr)
+    attach_decay1 = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("DECAY_1"), *relay_decay1, nullptr);
+    attach_attack1 = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("ATTACK_1"), *relay_attack1, nullptr);
+    attach_tiltFilter1 = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("TILT_FILTER_1"), *relay_tiltFilter1, nullptr);
+    attach_pitch1 = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("PITCH_1"), *relay_pitch1, nullptr);
+    attach_volume1 = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("VOLUME_1"), *relay_volume1, nullptr);
+    attach_solo1 = std::make_unique<juce::WebToggleButtonParameterAttachment>(
+        *processorRef.parameters.getParameter("SOLO_1"), *relay_solo1, nullptr);
+    attach_mute1 = std::make_unique<juce::WebToggleButtonParameterAttachment>(
+        *processorRef.parameters.getParameter("MUTE_1"), *relay_mute1, nullptr);
+    attach_lock1 = std::make_unique<juce::WebToggleButtonParameterAttachment>(
+        *processorRef.parameters.getParameter("LOCK_1"), *relay_lock1, nullptr);
+
+    // Slot 2 attachments
+    attach_decay2 = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("DECAY_2"), *relay_decay2, nullptr);
+    attach_attack2 = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("ATTACK_2"), *relay_attack2, nullptr);
+    attach_tiltFilter2 = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("TILT_FILTER_2"), *relay_tiltFilter2, nullptr);
+    attach_pitch2 = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("PITCH_2"), *relay_pitch2, nullptr);
+    attach_volume2 = std::make_unique<juce::WebSliderParameterAttachment>(
+        *processorRef.parameters.getParameter("VOLUME_2"), *relay_volume2, nullptr);
+    attach_solo2 = std::make_unique<juce::WebToggleButtonParameterAttachment>(
+        *processorRef.parameters.getParameter("SOLO_2"), *relay_solo2, nullptr);
+    attach_mute2 = std::make_unique<juce::WebToggleButtonParameterAttachment>(
+        *processorRef.parameters.getParameter("MUTE_2"), *relay_mute2, nullptr);
+    attach_lock2 = std::make_unique<juce::WebToggleButtonParameterAttachment>(
+        *processorRef.parameters.getParameter("LOCK_2"), *relay_lock2, nullptr);
 
     addAndMakeVisible(*webView);
     webView->goToURL(juce::WebBrowserComponent::getResourceProviderRoot());

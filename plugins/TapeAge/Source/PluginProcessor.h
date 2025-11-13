@@ -46,15 +46,17 @@ private:
     // Phase 4.2: Wow/Flutter Modulation
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Lagrange3rd> delayLine;
     float lfoPhase[2] { 0.0f, 0.0f };  // Separate phase per channel for stereo width
+    float flutterPhase[2] { 0.0f, 0.0f };  // Secondary flutter LFO phase per channel (v1.1.0)
     juce::Random random;
     double currentSampleRate { 44100.0 };
 
-    // Phase 4.3: Degradation Features (Dropout + Noise)
+    // Phase 4.3: Degradation Features (Dropout + Noise + High-frequency Rolloff)
     int dropoutCountdown { 0 };  // Samples until next dropout check
     bool inDropout { false };  // Dropout state flag
     int dropoutSamplesRemaining { 0 };  // Current dropout duration
     float dropoutEnvelope { 1.0f };  // Smooth attack/release (1.0 = no attenuation)
     float noiseFilterState[2] { 0.0f, 0.0f };  // One-pole lowpass filter state per channel
+    juce::dsp::IIR::Filter<float> ageFilter[2];  // High-frequency rolloff per channel (v1.1.0)
 
     // Phase 4.4: Dry/Wet Mixing
     juce::dsp::DryWetMixer<float> dryWetMixer;

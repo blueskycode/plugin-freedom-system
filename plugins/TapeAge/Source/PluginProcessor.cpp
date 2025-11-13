@@ -68,6 +68,10 @@ void TapeAgeAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     lfoPhase[0] = random.nextFloat() * juce::MathConstants<float>::twoPi;
     lfoPhase[1] = random.nextFloat() * juce::MathConstants<float>::twoPi;
 
+    // v1.1.0: Initialize flutter LFO with different random phase
+    flutterPhase[0] = random.nextFloat() * juce::MathConstants<float>::twoPi;
+    flutterPhase[1] = random.nextFloat() * juce::MathConstants<float>::twoPi;
+
     // Phase 4.3: Prepare degradation features
     // Initialize dropout state (no dropout at start)
     dropoutCountdown = static_cast<int>(sampleRate * 0.1);  // 100ms until first check
@@ -78,6 +82,16 @@ void TapeAgeAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     // Initialize noise filter state to zero
     noiseFilterState[0] = 0.0f;
     noiseFilterState[1] = 0.0f;
+
+    // v1.1.0: Prepare age-dependent high-frequency rolloff filters
+    for (int i = 0; i < 2; ++i)
+    {
+        ageFilter[i].prepare(currentSpec);
+        ageFilter[i].reset();
+        // Initialize with 20kHz lowpass (transparent at age=0)
+        auto coefficients = juce::dsp::IIR::Coefficients<float>::makeFirstOrderLowPass(sampleRate, 20000.0f);
+        ageFilter[i].coefficients = coefficients;
+    }
 
     // Phase 4.4: Prepare dry/wet mixer
     dryWetMixer.prepare(currentSpec);
@@ -170,16 +184,21 @@ void TapeAgeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
     float age = ageParam->load();
 
     // Calculate LFO modulation depth based on age
-    // Architecture.md: ±10 cents at max age (pitch ratio = 2^(cents/1200))
-    // ±10 cents = 2^(10/1200) = 1.005777895 (~0.58% pitch variation)
-    const float maxPitchVariationCents = 10.0f;
-    const float pitchVariationRatio = std::pow(2.0f, maxPitchVariationCents / 1200.0f) - 1.0f;  // ~0.005777895
+    // v1.1.0: Enhanced wow depth - ±25 cents at max age (was ±10 cents)
+    // ±25 cents = 2^(25/1200) = 1.0145 (~1.45% pitch variation, still musical)
+    const float maxPitchVariationCents = 25.0f;
+    const float pitchVariationRatio = std::pow(2.0f, maxPitchVariationCents / 1200.0f) - 1.0f;  // ~0.0145
     float modulationDepth = age * pitchVariationRatio;
 
     // LFO frequency: 0.5-2Hz (architecture.md line 29)
     // Use 1.0Hz as base frequency, scaled by age for subtle variation
     const float lfoFrequency = 1.0f + age;  // 1.0-2.0Hz range
     const float lfoPhaseIncrement = (lfoFrequency * juce::MathConstants<float>::twoPi) / static_cast<float>(currentSampleRate);
+
+    // v1.1.0: Secondary flutter LFO at 6Hz for texture
+    const float flutterFrequency = 6.0f;
+    const float flutterPhaseIncrement = (flutterFrequency * juce::MathConstants<float>::twoPi) / static_cast<float>(currentSampleRate);
+    const float flutterDepthRatio = 0.2f;  // 20% of wow depth
 
     // Process each channel
     const int numSamples = buffer.getNumSamples();
@@ -191,13 +210,17 @@ void TapeAgeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
 
         for (int sample = 0; sample < numSamples; ++sample)
         {
-            // Calculate LFO modulation (sine wave)
+            // Calculate primary wow LFO (sine wave)
             float lfoValue = std::sin(lfoPhase[channel]);
 
+            // v1.1.0: Calculate secondary flutter LFO and combine
+            float flutterValue = std::sin(flutterPhase[channel]);
+            float combinedModulation = lfoValue + (flutterValue * flutterDepthRatio);
+
             // Calculate delay time in samples
-            // Base delay at center of buffer (100ms) + modulation
+            // Base delay at center of buffer (100ms) + combined modulation
             float baseDelaySamples = static_cast<float>(currentSampleRate) * 0.1f;  // 100ms center
-            float modulationSamples = lfoValue * modulationDepth * baseDelaySamples;
+            float modulationSamples = combinedModulation * modulationDepth * baseDelaySamples;
             float totalDelay = baseDelaySamples + modulationSamples;
 
             // Push input sample to delay line
@@ -206,10 +229,36 @@ void TapeAgeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
             // Read modulated sample from delay line
             channelData[sample] = delayLine.popSample(channel, totalDelay);
 
-            // Advance LFO phase
+            // Advance LFO phases
             lfoPhase[channel] += lfoPhaseIncrement;
             if (lfoPhase[channel] >= juce::MathConstants<float>::twoPi)
                 lfoPhase[channel] -= juce::MathConstants<float>::twoPi;
+
+            flutterPhase[channel] += flutterPhaseIncrement;
+            if (flutterPhase[channel] >= juce::MathConstants<float>::twoPi)
+                flutterPhase[channel] -= juce::MathConstants<float>::twoPi;
+        }
+    }
+
+    // v1.1.0: Age-dependent high-frequency rolloff (simulates tape aging)
+    // Age 0%: 20kHz (transparent), Age 100%: 8kHz (vintage tape character)
+    if (age > 0.01f)  // Only apply filter if age is significant
+    {
+        // Exponential mapping for musical response: 20kHz -> 8kHz
+        float cutoffFrequency = 20000.0f * std::pow(0.4f, age);  // 0.4^1 = 0.4, so 20kHz * 0.4 = 8kHz at age=1
+
+        // Update filter coefficients if cutoff changed significantly
+        auto coefficients = juce::dsp::IIR::Coefficients<float>::makeFirstOrderLowPass(currentSampleRate, cutoffFrequency);
+
+        for (int channel = 0; channel < numChannels; ++channel)
+        {
+            ageFilter[channel].coefficients = coefficients;
+            auto* channelData = buffer.getWritePointer(channel);
+
+            for (int sample = 0; sample < numSamples; ++sample)
+            {
+                channelData[sample] = ageFilter[channel].processSample(channelData[sample]);
+            }
         }
     }
 
@@ -300,13 +349,14 @@ void TapeAgeAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
     }
 
     // === Tape Noise Generator ===
-    // Filtered white noise at VERY subtle amplitude (architecture.md line 124-129)
-    // Noise amplitude scaled by age: 0% = silent, 100% = -80dB to -60dB
+    // Filtered white noise at subtle amplitude (architecture.md line 124-129)
+    // v1.1.0: Increased noise floor for more present vintage character
+    // Noise amplitude scaled by age: 0% = silent, 100% = -60dB
 
-    // Calculate noise gain based on age (VERY subtle)
+    // Calculate noise gain based on age
     // age = 0.0 → noiseGain = 0.0 (silent)
-    // age = 1.0 → noiseGain = 0.0001 to 0.001 (-80dB to -60dB)
-    float noiseGain = age * 0.0001f;  // Maximum -80dB at full age (VERY subtle)
+    // age = 1.0 → noiseGain = 0.001 (-60dB, was -80dB)
+    float noiseGain = age * 0.001f;  // Maximum -60dB at full age (subtle but more present)
 
     if (noiseGain > 0.0f)
     {

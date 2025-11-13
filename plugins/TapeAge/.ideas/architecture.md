@@ -26,7 +26,8 @@
 - **Parameters Affected:** age
 - **Configuration:**
   - Delay line: 200ms buffer for pitch shifting
-  - LFO: Multiple low-frequency oscillators (0.5-2Hz for wow, subtle flutter component)
+  - Primary LFO (wow): 1-2Hz for slow smooth drift
+  - Secondary LFO (flutter): 6Hz at 20% depth for texture (v1.1.0)
   - Modulation depth scaled by age parameter
   - Smooth interpolation for artifact-free pitch shifts
 
@@ -46,8 +47,17 @@
 - **Parameters Affected:** age
 - **Configuration:**
   - White noise source with lowpass filtering (simulates tape frequency response)
-  - **CRITICAL:** Very low amplitude—subtle enhancement only
-  - Level scaled by age parameter with conservative maximum (-60dB to -40dB at max)
+  - Level scaled by age parameter: -60dB at max (v1.1.0, was -80dB)
+  - More present but still subtle vintage character
+
+### High-Frequency Rolloff Filter (v1.1.0)
+- **JUCE Class:** `juce::dsp::IIR::Filter<float>` (one-pole lowpass)
+- **Purpose:** Simulates tape aging and head wear
+- **Parameters Affected:** age
+- **Configuration:**
+  - Age 0%: 20kHz cutoff (transparent)
+  - Age 100%: 8kHz cutoff (vintage tape character)
+  - Exponential frequency mapping for musical response
 
 ### Dry/Wet Mixer
 - **JUCE Class:** `juce::dsp::DryWetMixer<float>`
@@ -69,6 +79,8 @@ Saturation Waveshaper ← drive parameter (0-100%)
 Oversampling Downsample
   ↓
 Wow/Flutter Modulator ← age parameter (pitch modulation depth)
+  ↓
+High-Frequency Rolloff ← age parameter (cutoff frequency 20kHz→8kHz, v1.1.0)
   ↓
 Dropout Generator ← age parameter (probability)
   ↓
@@ -101,13 +113,13 @@ Output (Stereo)
 - JUCE helpers available: `juce::dsp::WaveShaper::functionToUse = [](float x) { return tanh(gain * x); }`
 
 **Wow/Flutter Modulation:**
-- Implementation approach: Variable delay line with LFO-modulated read position
+- Implementation approach: Variable delay line with dual LFO-modulated read position
 - Delay line size: 200ms at 96kHz (19200 samples) to allow pitch shifts
 - LFO configuration:
-  - Primary wow: 0.5-2Hz sine/triangle wave (slow smooth drift)
-  - Subtle flutter: Optional 4-8Hz component at very low amplitude
+  - Primary wow: 1-2Hz sine wave (slow smooth drift)
+  - Secondary flutter: 6Hz sine wave at 20% depth for texture (v1.1.0)
   - Random phase offset per channel for stereo width
-- Pitch shift range: ±10 cents at max age (subtle but noticeable)
+- Pitch shift range: ±25 cents at max age (v1.1.0, was ±10 cents - more noticeable warble)
 - Key considerations: Use cubic/lagrange interpolation for smooth pitch shifts, avoid clicks
 - JUCE helpers available: `juce::DelayLine<float, juce::DelayLineInterpolationTypes::Lagrange3rd>`
 
@@ -120,13 +132,22 @@ Output (Stereo)
 - Key considerations: Ensure stereo coherence (same dropout on L/R), smooth envelope, rare enough to not annoy
 
 **Tape Noise:**
-- Implementation approach: Filtered white noise mixed at very low level
+- Implementation approach: Filtered white noise mixed at subtle level
 - Noise generation: `juce::Random::nextFloat() * 2.0f - 1.0f` for white noise
 - Filtering: Simple one-pole lowpass ~8kHz (simulates tape frequency response)
 - Amplitude scaling:
   - age = 0%: noise gain = 0 (silent)
-  - age = 100%: noise gain = 0.0001 to 0.001 (-80dB to -60dB, VERY subtle)
-- Key considerations: **CRITICAL—must remain barely audible even at max age**
+  - age = 100%: noise gain = 0.001 (-60dB, v1.1.0 was -80dB)
+- Key considerations: More present vintage character but still subtle
+
+**High-Frequency Rolloff (v1.1.0):**
+- Implementation approach: Age-dependent one-pole IIR lowpass filter
+- Filter type: `juce::dsp::IIR::Filter<float>::makeFirstOrderLowPass()`
+- Cutoff frequency mapping:
+  - age = 0%: 20kHz (transparent, no effect)
+  - age = 100%: 8kHz (vintage tape character, noticeable treble loss)
+  - Exponential mapping: `cutoff = 20000 * pow(0.4, age)`
+- Key considerations: Simulates tape head wear and high-frequency degradation, classic "old tape" sound
 
 **Dry/Wet Mixing:**
 - Implementation approach: Equal-power crossfade using `juce::dsp::DryWetMixer`
