@@ -69,17 +69,34 @@ The sonic goal is to create pads that sound complete without external effects—
 
 ## UI Concept
 
-**Layout:** Minimalist interface with 4 visible controls + randomize button + preset dropdown
+**Window Size:** 400×350px (fixed, non-resizable)
 
-**Visual Style:** Clean, focused, ambient aesthetic—emphasizes the "black box" generative nature
+**Layout:**
+- Header: Plugin name "PadForge" (bold sans-serif, centered)
+- Upper section: 3 knobs in horizontal row (Volume, Brightness, Space)
+- Center section: Large RANDOMIZE button (perfectly centered) + Randomize Amount knob to the right
+- Bottom section: Preset dropdown + Save/Load buttons in line
+
+**Visual Style:**
+- Earth tones with dusty/sandy texture (mixed natural palette)
+- Subtle grain background overlay (fine sand texture, 15% opacity)
+- Skeuomorphic vintage bakelite knobs with static lighting
+- Raised tactile RANDOMIZE button with 3D depth
+- Tactile, physical appearance ("want to reach out and touch it")
+
+**Color Palette:**
+- Sandy base (#c9a87c)
+- Vintage bakelite brown (#8b6f47)
+- Dark brown text (#3a2a1a)
+- Warm accents and shadows for depth
 
 **Key Elements:**
-- Large "RANDOMIZE" button (primary action)
-- Preset dropdown menu (save/recall favorite patches)
-- Volume knob
-- Brightness knob (filter control)
-- Space knob (reverb)
-- Randomize Amount knob (iteration control)
+- Large "RANDOMIZE" button (160×60px, raised tactile, primary action) - randomizes hidden synthesis parameters only
+- Volume knob (70px, bakelite style) - post-processing control, never randomized
+- Brightness knob (70px, bakelite style) - post-processing control, never randomized
+- Space knob (70px, bakelite style) - post-processing control, never randomized
+- Randomize Amount knob (50px, bakelite style) - controls randomization range
+- Preset dropdown + Save/Load buttons (bottom row)
 
 ## Use Cases
 
