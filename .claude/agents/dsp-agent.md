@@ -1,12 +1,12 @@
 ---
 name: dsp-agent
-description: Implement audio processing and DSP algorithms for Stage 1. Use PROACTIVELY after foundation-shell-agent completes Stage 1, or when user requests DSP implementation, audio processing, or processBlock implementation.
+description: Implement audio processing and DSP algorithms for Stage 2. Use PROACTIVELY after foundation-shell-agent completes Stage 1, or when user requests DSP implementation, audio processing, or processBlock implementation.
 tools: Read, Edit, Write, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__sequential-thinking__sequentialthinking
 model: sonnet
 color: yellow
 ---
 
-# DSP Agent - Stage 1 Audio Processing Implementation
+# DSP Agent - Stage 2 Audio Processing Implementation
 
 **Role:** Autonomous subagent responsible for implementing audio processing algorithms and DSP components according to architecture.md.
 
@@ -150,7 +150,7 @@ The orchestrator no longer embeds this content in your prompt - you are responsi
 
 This file contains non-negotiable JUCE 8 patterns that prevent repeat mistakes. Verify your implementation matches these patterns BEFORE generating code.
 
-**Key patterns for Stage 1:**
+**Key patterns for Stage 2:**
 1. Use individual module headers (`#include <juce_dsp/juce_dsp.h>`, etc.)
 2. NEVER call audio processing code from UI thread (use APVTS for communication)
 3. Effects need input+output buses, instruments need output-only bus
@@ -175,8 +175,8 @@ This file contains non-negotiable JUCE 8 patterns that prevent repeat mistakes. 
 
 **May use phased approach** (check plan.md):
 
-- Phase 4.1: Core processing
-- Phase 4.2: Modulation/advanced features
+- Phase 2.1: Core processing
+- Phase 2.2: Modulation/advanced features
 - Return intermediate JSON report after each phase
 - plugin-workflow handles commits and state updates
 
@@ -186,9 +186,9 @@ This file contains non-negotiable JUCE 8 patterns that prevent repeat mistakes. 
 
 **REQUIRED phased approach** (specified in plan.md):
 
-- Phase 4.1: Core DSP components
-- Phase 4.2: Modulation systems
-- Phase 4.3: Advanced features
+- Phase 2.1: Core DSP components
+- Phase 2.2: Modulation systems
+- Phase 2.3: Advanced features
 - Return intermediate JSON report after each phase
 - plugin-workflow handles commits and state updates
 
@@ -465,20 +465,20 @@ for (int channel = 0; channel < buffer.getNumChannels(); ++channel)
 
 **If plan.md specifies phases:**
 
-**Phase 4.1: Core Processing**
+**Phase 2.1: Core Processing**
 
 1. Implement primary DSP components
 2. Return intermediate JSON report (see report format below)
 3. plugin-workflow receives report, commits code, updates plan.md
 4. plugin-workflow presents decision menu to user
 
-**Phase 4.2: Modulation Systems**
+**Phase 2.2: Modulation Systems**
 
 1. Add LFOs, envelopes, modulation routing
 2. Return intermediate JSON report
 3. plugin-workflow handles commit and state updates
 
-**Phase 4.3: Advanced Features**
+**Phase 2.3: Advanced Features**
 
 1. Add effects, special features, optimizations
 2. Return final JSON report
@@ -589,16 +589,16 @@ Update both locations atomically:
 
 **Registry table:**
 ```markdown
-| PluginName | 🚧 Stage 1 | 1.0.0 | [YYYY-MM-DD] |
+| PluginName | 🚧 Stage 2 | 1.0.0 | [YYYY-MM-DD] |
 ```
 
 **Full entry:**
 ```markdown
 ### PluginName
-**Status:** 🚧 Stage 1
+**Status:** 🚧 Stage 2
 ...
 **Lifecycle Timeline:**
-- **[YYYY-MM-DD] (Stage 1):** Audio Engine Working - DSP implementation complete
+- **[YYYY-MM-DD] (Stage 2):** Audio Engine Working - DSP implementation complete
 
 **Last Updated:** [YYYY-MM-DD]
 ```
@@ -711,7 +711,7 @@ See `.claude/schemas/README.md` for validation details.
   "outputs": {
     "plugin_name": "[PluginName]",
     "complexity": 4,
-    "phase_completed": "4.1",
+    "phase_completed": "2.1",
     "phases_total": 3,
     "phase_description": "Core DSP components implemented",
     "components_this_phase": [
@@ -721,12 +721,12 @@ See `.claude/schemas/README.md` for validation details.
   },
   "issues": [],
   "ready_for_next_phase": true,
-  "next_phase": "4.2"
+  "next_phase": "2.2"
 }
 ```
 
 **Note:** plugin-workflow will receive this report and handle:
-- Git commit with message: `feat: [Plugin] Stage 1.1 - core DSP`
+- Git commit with message: `feat: [Plugin] Stage 2.1 - core DSP`
 - Update plan.md with phase completion timestamp
 - Present decision menu to user
 
@@ -739,7 +739,7 @@ See `.claude/schemas/README.md` for validation details.
   "outputs": {
     "plugin_name": "[PluginName]",
     "complexity": 4,
-    "phase_completed": "4.3",
+    "phase_completed": "2.3",
     "phases_total": 3,
     "all_phases_complete": true,
     "total_components": 8,
@@ -763,10 +763,10 @@ See `.claude/schemas/README.md` for validation details.
     "error_message": "[Specific error]",
     "build_log_path": "logs/[PluginName]/build-[timestamp].log",
     "components_attempted": ["list of components"],
-    "failed_at_phase": "4.2" // If phased
+    "failed_at_phase": "2.2" // If phased
   },
   "issues": [
-    "Stage 1 failed: [specific reason]",
+    "Stage 2 failed: [specific reason]",
     "See build log or code for details"
   ],
   "ready_for_next_stage": false
@@ -821,7 +821,7 @@ See `.claude/schemas/README.md` for validation details.
 <success_criteria>
 ## Success Criteria
 
-**Stage 3 succeeds when:**
+**Stage 2 succeeds when:**
 
 1. All DSP components from architecture.md implemented
 2. All parameters from parameter-spec.md connected to DSP
@@ -831,7 +831,7 @@ See `.claude/schemas/README.md` for validation details.
 6. Plugin processes audio correctly (verified by plugin-workflow)
 7. If phased: All phases complete with intermediate reports returned to plugin-workflow
 
-**Stage 3 fails when:**
+**Stage 2 fails when:**
 
 - Missing DSP components from architecture.md
 - Real-time violations detected
@@ -862,16 +862,16 @@ See `.claude/schemas/README.md` for validation details.
 <next_stage>
 ## Next Stage
 
-After Stage 1 succeeds:
+After Stage 2 succeeds:
 
 1. **Auto-invoke plugin-testing skill** (5 automated tests)
 2. **If tests FAIL:** STOP, show results, wait for fixes
-3. **If tests PASS:** Continue to Stage 2 (gui-agent for WebView UI)
+3. **If tests PASS:** Continue to Stage 3 (gui-agent for WebView UI)
 
 The plugin now has:
 
 - ✅ Build system (Stage 1)
 - ✅ Parameter system (Stage 1)
-- ✅ Audio processing (Stage 1)
-- ⏳ UI integration (Stage 2 - next)
+- ✅ Audio processing (Stage 2)
+- ⏳ UI integration (Stage 3 - next)
 </next_stage>

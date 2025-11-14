@@ -148,30 +148,19 @@ After receiving question batch answers:
 <decision_gate id="finalize_or_continue" phase="3.5">
 <critical_sequence>
 MUST present this decision gate after EVERY question batch (Phase 3).
-MUST use AskUserQuestion tool (not inline numbered list).
+MUST use inline numbered list format (consistent with checkpoint protocol).
 MUST wait for user response before proceeding.
 </critical_sequence>
 
-<required_options>
-1. "Yes, finalize it" → Proceed to Phase 3.7 (name aesthetic)
-2. "Ask me 4 more questions" → Return to Phase 2 (re-analyze gaps)
-3. "Let me add more context first" → Collect free-form text, return to Phase 2
-</required_options>
+<required_menu>
+Ready to finalize the aesthetic concept?
 
-<tool_format>
-AskUserQuestion({
-  questions: [{
-    question: "Ready to finalize the aesthetic concept?",
-    header: "Next step",
-    multiSelect: false,
-    options: [
-      { label: "Yes, finalize it", description: "Create aesthetic.md and optional previews" },
-      { label: "Ask me 4 more questions", description: "Continue refining the design" },
-      { label: "Let me add more context first", description: "Provide additional details before questions" }
-    ]
-  }]
-})
-</tool_format>
+1. Yes, finalize it - Create aesthetic.md and optional previews
+2. Ask me 4 more questions - Continue refining the design
+3. Let me add more context first - Provide additional details before questions
+
+Choose (1-3): _
+</required_menu>
 
 <routing_logic>
 IF option 1 THEN proceed to Phase 3.7
@@ -252,172 +241,11 @@ Store selected preview types in context for Phase 5 generation.
 ---
 
 <phase id="5" name="generate_files">
-<critical_sequence enforcement="strict" allow_reordering="false">
-MUST execute steps in this exact order (no parallelization):
-1. Read template
-2. Generate prose (requires template)
-3. Write aesthetic.md (requires prose)
-4. Generate metadata.json (requires aesthetic ID)
-5. Generate test previews (requires aesthetic.md completion)
-6. Update manifest (requires metadata.json)
-7. Commit changes to git (requires all files created)
-8. Present confirmation (requires git commit complete)
-</critical_sequence>
-
-<progress_tracking>
-Copy this checklist to track Phase 5 progress:
-
-```
-Phase 5 Progress:
-- [ ] Step 1: Read aesthetic template
-- [ ] Step 2: Generate prose from context
-- [ ] Step 3: Write aesthetic.md file
-- [ ] Step 4: Generate metadata.json
-- [ ] Step 5: Generate test previews (if selected)
-- [ ] Step 6: Update manifest.json
-- [ ] Step 7: Commit to git
-- [ ] Step 8: Present confirmation
-```
-
-**Critical**: Execute steps sequentially. Each step requires output from previous step.
-</progress_tracking>
-
-<step id="1">
-Read template: /Users/lexchristopherson/Developer/plugin-freedom-system/.claude/skills/ui-template-library/assets/aesthetic-template.md
-</step>
-
-<step id="2">
-<prose_generation_requirements>
-Transform accumulated context into descriptive prose following template structure. Balance prose descriptions with concrete examples (specific colors, sizes, values).
-
-See [ui-template-library/assets/aesthetic-template.md](ui-template-library/assets/aesthetic-template.md) for section structure. ui-template-library handles interpretation and application.
-</prose_generation_requirements>
-</step>
-
-<step id="3">
-Write aesthetic.md to: .claude/aesthetics/[aesthetic-id]/aesthetic.md
-
-<verification>
-Before proceeding to Step 4:
-- File exists at expected path
-- File size >1KB (indicates content written, not empty file)
-- All 12 template sections present in file
-</verification>
-</step>
-
-<step id="4">
 <instructions>
-Generate metadata.json with: id, name, description, created timestamp, tags, isTemplateOnly: true, testPreviews array
+Execute the complete 8-step generation sequence with verification checkpoints.
 
-**Tag Inference Rules**: Extract tags from accumulated context:
-- Vibe keywords (modern, vintage, minimal, bold, etc.)
-- Color family (dark, light, blue, warm, cool, etc.)
-- Plugin type mentions (compressor, reverb, synth, etc.)
-- Control style (flat, 3D, skeuomorphic, etc.)
-
-Example: "Dark modern blue flat controls" → tags: ["dark", "modern", "blue", "flat"]
+See references/file-generation.md for complete Phase 5 implementation protocol.
 </instructions>
-
-<verification>
-Before proceeding to Step 5:
-- metadata.json exists at .claude/aesthetics/[aesthetic-id]/metadata.json
-- File contains valid JSON (parseable)
-- Required fields present: id, name, description, created, tags, isTemplateOnly
-</verification>
-</step>
-
-<step id="5">
-<conditional_execution>
-IF test previews selected in Phase 4 THEN:
-  FOR EACH selected plugin type:
-    - Read spec from assets/test-plugin-specs.json
-    - Invoke ui-template-library skill "apply" operation
-    - Save HTML to .claude/aesthetics/[id]/test-previews/[plugin-type].html
-  END FOR
-END IF
-</conditional_execution>
-
-<verification>
-Before proceeding to Step 6:
-IF test previews were selected:
-- All selected preview HTML files exist in test-previews/ subdirectory
-- Each file size >2KB (indicates content, not empty)
-- ui-template-library invocations returned success status
-</verification>
-
-See references/test-preview-protocol.md for detailed invocation protocol.
-</step>
-
-<step id="6">
-Read .claude/aesthetics/manifest.json, append new aesthetic entry, write updated manifest.
-
-<verification>
-Before proceeding to Step 7:
-- manifest.json exists and is valid JSON
-- New aesthetic entry present in manifest array
-- Entry contains all required metadata fields
-</verification>
-</step>
-
-<step id="7">
-<instructions>
-Commit aesthetic to git using conventional format.
-</instructions>
-
-<commit_format>
-**Stage all aesthetic files:**
-
-```bash
-git add .claude/aesthetics/[aesthetic-id]/
-```
-
-**Commit with conventional format:**
-
-```bash
-git commit -m "feat(aesthetics): [aesthetic-name] - new aesthetic template
-
-Created aesthetic with [N] test previews ([preview-types])
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-```
-
-**Example:**
-
-```bash
-git add .claude/aesthetics/modern-professional-001/
-git commit -m "feat(aesthetics): Modern Professional - new aesthetic template
-
-Created aesthetic with 2 test previews (simple-compressor, complex-reverb)
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-```
-
-**If no test previews selected:**
-
-```bash
-git commit -m "feat(aesthetics): [aesthetic-name] - new aesthetic template
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-```
-</commit_format>
-
-<verification>
-Before proceeding to Step 8:
-- Git status shows clean working directory (all files committed)
-- Commit exists in git log with expected message format
-- No uncommitted changes remain
-</verification>
-</step>
-
-<step id="8">
-Present confirmation with file paths and preview open commands.
-</step>
 </phase>
 
 ---
@@ -427,6 +255,16 @@ Present confirmation with file paths and preview open commands.
 This is a system checkpoint. MUST follow Plugin Freedom System checkpoint protocol.
 MUST use inline numbered list format (NOT AskUserQuestion tool) per CLAUDE.md checkpoint protocol.
 </checkpoint_protocol>
+
+<workflow_mode_check>
+Before presenting decision menu:
+1. Read .claude/preferences.json to check workflow.mode setting
+2. IF mode === "express" AND skill was NOT explicitly invoked via /dream command:
+   - Skip decision menu
+   - Exit skill gracefully with completion message
+3. ELSE:
+   - Present decision menu and wait for user response
+</workflow_mode_check>
 
 <decision_menu>
 ✅ Aesthetic "[Name]" ready!
@@ -449,11 +287,6 @@ Option 4: Read PLUGINS.md, user selects plugin, invoke ui-mockup skill with aest
 Option 5: Exit skill
 </routing_logic>
 
-<note>
-Phase 3.5 and 3.7 use AskUserQuestion because they are INTERNAL decision gates (workflow branching).
-Phase 6 uses inline numbered list because it is a SYSTEM CHECKPOINT (user discovers next actions).
-</note>
-
 <state_requirement>
 MUST wait for user response. NEVER auto-proceed to any option.
 </state_requirement>
@@ -468,89 +301,14 @@ MUST wait for user response. NEVER auto-proceed to any option.
 
 **Tier Priority**: Tier 1 (Critical: vibe, color philosophy, control style) → Tier 2 (Visual Core: specific colors, typography, spacing, textures) → Tier 3 (Context: plugin types, inspirations, special features)
 
-See [references/aesthetic-questions.md](references/aesthetic-questions.md) for detailed gap analysis strategies and question banks. See [references/workflow-examples.md](references/workflow-examples.md) for complete examples.
+See references/aesthetic-questions.md for detailed gap analysis strategies and question banks.
+See references/workflow-examples.md for complete examples showing adaptive questioning across different input scenarios.
 </adaptive_questioning_strategy>
 
 ---
 
-## Question Generation Examples
-
-See [references/workflow-examples.md](references/workflow-examples.md) for detailed examples showing adaptive questioning across different input scenarios (detailed vs. vague, single iteration vs. multi-iteration).
-
----
-
 <handoff_protocol>
-<invoked_by>
-- /dream command (option: "Create aesthetic template")
-- Natural language: "Create aesthetic template", "Design visual system"
-- Direct skill invocation: Skill("aesthetic-dreaming")
-</invoked_by>
-
-<invokes>
-<skill name="ui-template-library">
-  <operation>apply</operation>
-  <context>Phase 5, Step 5: Test preview generation</context>
-
-  <preconditions>
-    MUST verify before invocation:
-    - aesthetic.md exists at .claude/aesthetics/[id]/aesthetic.md
-    - Test plugin spec exists in assets/test-plugin-specs.json
-    - Aesthetic ID is valid and unique
-    - Output directory .claude/aesthetics/[id]/test-previews/ exists
-  </preconditions>
-
-  <invocation_parameters>
-    - aesthetic_id: string (e.g., "modern-professional-001")
-    - target_plugin_name: string (e.g., "TestCompressor")
-    - parameter_spec: object (from test-plugin-specs.json)
-    - output_dir: string (.claude/aesthetics/[id]/test-previews/)
-    - filename: string (e.g., "simple-compressor.html")
-  </invocation_parameters>
-
-  <postconditions>
-    Verify after invocation:
-    - HTML file created at specified path
-    - File is valid standalone HTML (can be opened in browser)
-    - Success status returned from skill
-  </postconditions>
-
-  <error_handling>
-    IF skill invocation fails:
-    - Log error message
-    - Continue with remaining previews (don't abort entire Phase 5)
-    - Report failure in Phase 5 confirmation message
-  </error_handling>
-</skill>
-
-<skill name="ui-mockup">
-  <operation>create_mockup_with_aesthetic</operation>
-  <context>Phase 6, Option 4: Apply to existing plugin</context>
-
-  <preconditions>
-    MUST verify before invocation:
-    - Plugin exists in PLUGINS.md
-    - Plugin has parameter-spec.md
-    - Aesthetic exists in manifest.json
-  </preconditions>
-
-  <handoff_data>
-    Pass to ui-mockup:
-    - aesthetic_id: string (pre-select in Phase 0)
-    - plugin_name: string (user selected from PLUGINS.md)
-  </handoff_data>
-
-  <postconditions>
-    ui-mockup skill takes over:
-    - Loads aesthetic.md for interpretation
-    - Generates mockup with aesthetic applied
-    - aesthetic-dreaming skill exits after handoff
-  </postconditions>
-</skill>
-</invokes>
-
-<integration_notes>
-When aesthetic-dreaming creates an aesthetic, it becomes immediately available in ui-mockup Phase 0 aesthetic selection menu.
-</integration_notes>
+See references/handoff-protocol.md for complete skill invocation details and integration with ui-template-library and ui-mockup.
 </handoff_protocol>
 
 ---

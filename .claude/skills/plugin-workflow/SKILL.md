@@ -28,7 +28,7 @@ This skill orchestrates plugin implementation stages 1-4. Stage 0 (Research & Pl
 - **UI Integrated:** Connect WebView interface to audio engine (gui-agent)
 - **Plugin Complete:** Factory presets, validation, and final polish (direct or validation-agent)
 
-**Internal stage mapping:** Stage 0 → Research & Planning Complete, Stage 1 → Build System Ready, Stage 1 → Audio Engine Working, Stage 2 → UI Integrated
+**Internal stage mapping:** Stage 0 → Research & Planning Complete, Stage 1 → Build System Ready, Stage 2 → Audio Engine Working, Stage 3 → UI Integrated
 
 <orchestration_rules enforcement_level="STRICT">
   <delegation_rule
@@ -55,11 +55,11 @@ This skill orchestrates plugin implementation stages 1-4. Stage 0 (Research & Pl
 
     <valid_delegations>
       - Stage 1: foundation-shell-agent
-      - Stage 1: dsp-agent
-      - Stage 2: gui-agent
+      - Stage 2: dsp-agent
+      - Stage 3: gui-agent
     </valid_delegations>
 
-    Stage 3 can optionally run directly in orchestrator or via validation-agent subagent.
+    Stage 4 can optionally run directly in orchestrator or via validation-agent subagent.
   </delegation_rule>
 
   <checkpoint_protocol
@@ -84,8 +84,8 @@ This skill orchestrates plugin implementation stages 1-4. Stage 0 (Research & Pl
     </enforcement>
 
     <applies_to>
-      - Simple plugins (complexity ≤2): After stages 2, 3, 4, 5
-      - Complex plugins (complexity ≥3): After stages 2 AND after EACH DSP/GUI phase (3.1, 3.2, 3.3+, 4.1, 4.2, 4.3+), then 5
+      - Simple plugins (complexity ≤2): After stages 1, 2, 3, 4
+      - Complex plugins (complexity ≥3): After stages 1 AND after EACH DSP/GUI phase (2.1, 2.2, 2.3+, 3.1, 3.2, 3.3+), then 4
 
       Note: Phase count determined by plan.md (varies by complexity)
     </applies_to>
@@ -404,7 +404,7 @@ if [ -f "plugins/${PLUGIN_NAME}/.continue-here.md" ]; then
     echo "Resuming from Stage ${CURRENT_STAGE}"
 else
     # Starting fresh after planning
-    CURRENT_STAGE=2
+    CURRENT_STAGE=1
     echo "Starting implementation at Stage 1"
 fi
 ```
@@ -432,16 +432,16 @@ See `references/state-management.md` for `checkStagePreconditions()` function.
 
 ## Phase-Aware Dispatch
 
-For Stages 3-4 with complexity ≥3, use phase-aware dispatch to incrementally implement complex plugins.
+For Stages 2-3 with complexity ≥3, use phase-aware dispatch to incrementally implement complex plugins.
 
 **When to use:**
-- Stage 2 (DSP) or 4 (GUI)
+- Stage 2 (DSP) or Stage 3 (GUI)
 - Complexity score ≥3 (from plan.md)
-- plan.md contains phase markers (### Phase 3.X or ### Phase 4.X)
+- plan.md contains phase markers (### Phase 2.X or ### Phase 3.X)
 
 **How it works:**
 1. Detect phases by scanning plan.md for phase markers
-2. Loop through phases sequentially (Phase 3.1 → 3.2 → 3.3...)
+2. Loop through phases sequentially (Phase 2.1 → 2.2 → 2.3...)
 3. Invoke subagent once per phase with phase-specific prompt
 4. Execute checkpoint protocol after each phase
 5. Present decision menu showing progress ("Phase 2 of 4 complete")
@@ -525,7 +525,7 @@ For detailed algorithm, pseudocode, and examples, see [references/phase-aware-di
 4. **Checkpoint enforcement after EVERY subagent:**
 
 <workflow_loop>
-  <stage_iteration from="2" to="5">
+  <stage_iteration from="1" to="4">
     <dispatch_phase>
       Display: "━━━ Stage ${currentStage} ━━━"
 
@@ -562,7 +562,7 @@ For detailed algorithm, pseudocode, and examples, see [references/phase-aware-di
         </step>
 
         <step order="3" required="true" function="invokeValidation">
-          IF currentStage in [2, 3, 4]:
+          IF currentStage in [1, 2, 3]:
             Log: "Invoking validation-agent for semantic review..."
             validationResult = invokeValidationAgent(pluginName, currentStage)
             validation = parseValidationReport(validationResult)
@@ -591,7 +591,7 @@ For detailed algorithm, pseudocode, and examples, see [references/phase-aware-di
         <step order="6" required="true" function="handleCheckpoint">
           handleCheckpoint({ stage, completionStatement, pluginName, workflowMode, hasErrors })
 
-          IF workflowMode == "express" AND currentStage < 5 AND hasErrors == false:
+          IF workflowMode == "express" AND currentStage < 4 AND hasErrors == false:
             # Express mode: Auto-progress to next stage
             displayProgressMessage(currentStage, nextStage)
             Log: "Express mode: Auto-progressing to Stage ${nextStage}"
@@ -608,13 +608,14 @@ For detailed algorithm, pseudocode, and examples, see [references/phase-aware-di
 
         **Implementation:**
         ```
-        After steps 1-4 complete, run verification:
+        After steps 1-5 complete, run verification:
 
         CHECKPOINT VERIFICATION:
         ✓ Step 1: State update verified (subagent updated: true)
         ✓ Step 2: Fallback skipped (not needed) OR Fallback completed
-        ✓ Step 3: Git commit [commit-hash]
-        ✓ Step 4: All checkpoint steps validated
+        ✓ Step 3: Validation passed (or skipped for Stage 4)
+        ✓ Step 4: Git commit [commit-hash]
+        ✓ Step 5: All checkpoint steps validated
 
         IF all verified:
           Proceed to decision menu
@@ -651,7 +652,7 @@ For detailed algorithm, pseudocode, and examples, see [references/phase-aware-di
     </checkpoint_phase>
 
     <decision_gate blocking="conditional">
-      IF workflowMode == "express" AND currentStage < 5 AND hasErrors == false:
+      IF workflowMode == "express" AND currentStage < 4 AND hasErrors == false:
         # Express mode: Auto-progress (no wait)
         currentStage++
       ELSE:
@@ -671,7 +672,7 @@ For detailed algorithm, pseudocode, and examples, see [references/phase-aware-di
   </stage_iteration>
 
   <completion_check>
-    IF currentStage > 5:
+    IF currentStage > 4:
       Display: "✓ All stages complete!"
       updatePluginStatus(pluginName, '✅ Working')
   </completion_check>
@@ -681,7 +682,7 @@ For detailed algorithm, pseudocode, and examples, see [references/phase-aware-di
 
 ```javascript
 // From /implement command (after planning complete):
-runWorkflow(pluginName, 2)
+runWorkflow(pluginName, 1)
 
 // From /continue command:
 const handoff = readHandoffFile(pluginName)
@@ -1157,10 +1158,10 @@ For detailed error patterns, recovery strategies, and reporting format, see [ref
     </anti_pattern>
 
     <anti_pattern severity="CRITICAL" ref="phase-aware-dispatch">
-      ❌ Sending "Implement ALL phases" to subagent for Stages 4-5
+      ❌ Sending "Implement ALL phases" to subagent for Stages 2-3
       ✓ ALWAYS detect phases in plan.md and loop through them one at a time
 
-      This error caused DrumRoulette Stage 4 to fail with compilation errors.
+      This error caused DrumRoulette Stage 2 to fail with compilation errors.
       Phase-aware dispatch (lines 270-578) is MANDATORY for complex plugins.
     </anti_pattern>
 
@@ -1170,7 +1171,7 @@ For detailed error patterns, recovery strategies, and reporting format, see [ref
     </anti_pattern>
 
     <anti_pattern severity="HIGH">
-      ❌ Skipping phase detection for Stages 3-4 when complexity ≥3
+      ❌ Skipping phase detection for Stages 2-3 when complexity ≥3
       ✓ Read plan.md to check for phases BEFORE invoking dsp-agent or gui-agent
     </anti_pattern>
 

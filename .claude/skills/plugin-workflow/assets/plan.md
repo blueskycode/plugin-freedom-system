@@ -23,63 +23,58 @@
 
 ## Stage Breakdown
 
-### Stage 1: Foundation
-**Duration:** [10-15 minutes]
+### Stage 1: Foundation + Shell
+**Duration:** [15-20 minutes]
 **Deliverables:**
 - CMakeLists.txt configuration
 - Basic JUCE project structure
 - APVTS parameter definitions from parameter-spec.md
-- Build system verification
-
-### Stage 2: Shell
-**Duration:** [5-10 minutes]
-**Deliverables:**
 - PluginProcessor skeleton
 - Parameter declarations (EXACT parameters from parameter-spec.md)
 - Empty processBlock()
-- Compiling plugin shell
+- Build system verification
 
-### Stage 3: DSP Implementation
+### Stage 2: DSP Implementation
 **Duration:** [Estimate based on complexity]
 
 **Implementation Strategy:** [Single-pass | Multi-phase]
 
 #### [If Multi-phase] Phase Breakdown:
 
-**Phase 4.1: [Phase Name]**
+**Phase 2.1: [Phase Name]**
 - Duration: [Estimate]
 - Components: [List from architecture.md]
 - Parameters: [Which parameters implemented]
 - Success criteria: [What makes this phase complete]
 
-**Phase 4.2: [Phase Name]**
+**Phase 2.2: [Phase Name]**
 - Duration: [Estimate]
 - Components: [List from architecture.md]
 - Parameters: [Which parameters implemented]
 - Success criteria: [What makes this phase complete]
 
-**Phase 4.3: [Phase Name]** (if needed)
+**Phase 2.3: [Phase Name]** (if needed)
 - Duration: [Estimate]
 - Components: [List from architecture.md]
 - Parameters: [Which parameters implemented]
 - Success criteria: [What makes this phase complete]
 
-### Stage 4: GUI Implementation
+### Stage 3: GUI Implementation
 **Duration:** [Estimate based on UI complexity]
 
 **Implementation Strategy:** [Single-pass | Multi-phase]
 
 #### [If Multi-phase] Phase Breakdown:
 
-**Phase 5.1: Basic Layout**
+**Phase 3.1: Basic Layout**
 - Duration: [Estimate]
 - Focus: Core structure and parameter bindings
 
-**Phase 5.2: Visual Feedback** (if needed)
+**Phase 3.2: Visual Feedback** (if needed)
 - Duration: [Estimate]
 - Focus: Meters, visualizations, animations
 
-**Phase 5.3: Polish** (if needed)
+**Phase 3.3: Polish** (if needed)
 - Duration: [Estimate]
 - Focus: Refinements and edge cases
 
@@ -103,6 +98,6 @@
 ## Notes
 
 - This plan is generated after contracts (parameter-spec.md, architecture.md) are locked
-- Complexity ≥3 plugins use multi-phase approach for Stage 3 and/or Stage 4
+- Complexity ≥3 plugins use multi-phase approach for Stage 2 and/or Stage 3
 - Each phase creates a git commit
 - Workflow can be paused at any stage boundary

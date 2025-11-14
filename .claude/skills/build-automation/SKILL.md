@@ -2,7 +2,7 @@
 
 ---
 name: build-automation
-description: Orchestrates plugin builds using the build script, handles failures with structured menus, and returns control to the invoking workflow. Used during compilation and installation.
+description: Orchestrates plugin builds and installation via build script with comprehensive failure handling. Use when build or compile is needed, build fails, compilation errors occur, or during plugin installation. Invoked by plugin-workflow, plugin-improve, and plugin-lifecycle skills.
 ---
 
 <!--
@@ -40,11 +40,11 @@ This skill fails when:
 
 Orchestrates plugin builds via `scripts/build-and-install.sh` with comprehensive failure handling.
 
-**Invokers:** plugin-workflow (Stages 1-4), plugin-improve (Phase 5), plugin-lifecycle (verification)
+**Invokers:** plugin-workflow (Stages 2-5), plugin-improve (Phase 7), plugin-lifecycle (verification)
 **Invokes:** build script, troubleshooter agent (on failure, user option 1)
 
 **Key behaviors:**
-- Context-aware build flags (Stage 1 uses `--no-install`, others full build)
+- Context-aware build flags (Stage 2 uses `--no-install`, others full build)
 - Structured 5-option failure menu (never auto-retry)
 - Context-specific success menus (different per stage)
 - Always returns control to invoker (never continues autonomously)
@@ -56,7 +56,7 @@ When invoked, this skill receives context via invocation parameters:
 ```json
 {
   "plugin_name": "PluginName",
-  "stage": "Stage 1" | "Stage 2" | "Stage 3" | "Stage 4" | "Stage 4" | null,
+  "stage": 0 | 2 | 3 | 4 | 5 | null,  // Stage numbers: 0=Planning, 2=Foundation, 3=DSP, 4=GUI, 5=Validation
   "invoker": "plugin-workflow" | "plugin-improve" | "plugin-lifecycle" | "manual",
   "build_flags": ["--no-install"] | ["--dry-run"] | []
 }
@@ -102,8 +102,8 @@ Build Progress:
 
 Context-aware flag selection:
 
-- **Stage 1 (Foundation)**: Always use `--no-install` flag (verify compilation only, no installation)
-- **Stages 3-6 (Shell/DSP/GUI/Validation)**: Full build with installation (no flags)
+- **Stage 2 (Foundation)**: Always use `--no-install` flag (verify compilation only, no installation)
+- **Stages 3-5 (DSP/GUI/Validation)**: Full build with installation (no flags)
 - **plugin-improve**: Full build with installation (no flags)
 - **Manual invocation** (`invoker: "manual"`): Ask if they want `--dry-run` to preview commands
 
@@ -221,7 +221,7 @@ Build time: [duration]
 Log: logs/[PluginName]/build_TIMESTAMP.log
 ```
 
-For `--no-install` builds (Stage 1):
+For `--no-install` builds (Stage 2):
 
 ```
 ✓ Build successful (compilation verified, not installed)
@@ -234,7 +234,28 @@ Build time: [duration]
 Log: logs/[PluginName]/build_TIMESTAMP.log
 ```
 
-### 3. Context-Aware Decision Menu
+### 3. Commit Build Success
+
+Before presenting decision menu, commit the successful build:
+
+**If invoked from workflow** (plugin-workflow, plugin-improve):
+```bash
+git add .
+git commit -m "chore: build [PluginName] successful"
+```
+
+**If manual invocation**: Skip commit (user manages their own git workflow)
+
+### 4. Check Workflow Mode
+
+Before presenting decision menu, check if auto-progression is configured:
+
+1. **Check invoker type**: If `invoker: "plugin-workflow"`, read workflow mode from .claude/preferences.json
+2. **Express mode**: Skip menu, exit immediately with SUCCESS status (auto-progression)
+3. **Manual mode**: Present context-aware decision menu (Step 5)
+4. **Manual invocation** (`invoker: "manual"`): Always present menu (no preferences check)
+
+### 5. Context-Aware Decision Menu
 
 Load context-appropriate menu from `assets/success-menus.md` based on `context.stage` parameter
 
@@ -248,15 +269,22 @@ After user makes decision from success menu:
    - **plugin-improve**: Exit with status SUCCESS, await improvement workflow
    - **Manual invocation**: Exit with final status message
 
+**State update responsibility:**
+- build-automation commits the successful build (Step 3 above)
+- Invoking skill (plugin-workflow) handles .continue-here.md and PLUGINS.md updates
+- Proper separation: build-automation handles build artifacts, orchestrator handles workflow state
+
 NEVER continue workflow autonomously after success.
 NEVER invoke next stage directly.
+NEVER update .continue-here.md or PLUGINS.md (invoking skill's responsibility).
 ALWAYS exit and let invoking skill/workflow orchestrate next action.
 
 Exit the skill cleanly:
 1. Do NOT invoke any other skills or agents
 2. Do NOT continue to next stage
-3. Simply complete skill execution
-4. The invoking skill/workflow will detect completion and proceed according to its own logic
+3. Do NOT update state files (.continue-here.md, PLUGINS.md)
+4. Simply complete skill execution
+5. The invoking skill/workflow will detect completion and proceed according to its own logic
 
 </handoff_protocol>
 
@@ -288,7 +316,7 @@ When user requests build retry after manual fix:
 MUST preserve from original invocation:
 - Build flags (`--no-install`, `--dry-run`, or none)
 - Invoking skill (plugin-workflow, plugin-improve, manual)
-- Invoking stage (Stage 1, 3, 4, 5, 6, or N/A)
+- Invoking stage (Stage 0, 2, 3, 4, 5, or N/A)
 - Last decision point (for return navigation)
 
 Context is already stored from skill entry (see "Context Mechanism" section).

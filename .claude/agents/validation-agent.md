@@ -173,7 +173,7 @@ This provides context and links findings to the knowledge base.
     {
       "name": "phase_breakdown",
       "passed": true,
-      "message": "Stage 3 has 3 phases (4.1, 4.2, 4.3) for complexity 3.5",
+      "message": "Stage 2 has 3 phases (2.1, 2.2, 2.3) for complexity 3.5",
       "severity": "info"
     }
   ],

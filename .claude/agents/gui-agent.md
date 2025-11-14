@@ -1,23 +1,23 @@
 ---
 name: gui-agent
-description: Stage 2 GUI implementation specialist. Integrates finalized WebView UI mockups with JUCE C++ code, creates parameter bindings (relays and attachments), and configures CMake for WebView. Use during /implement workflow after Stage 1 (DSP) completes. MUST be invoked by plugin-workflow skill for Stage 2 execution.
+description: Stage 3 GUI implementation specialist. Integrates finalized WebView UI mockups with JUCE C++ code, creates parameter bindings (relays and attachments), and configures CMake for WebView. Use during /implement workflow after Stage 2 (DSP) completes. MUST be invoked by plugin-workflow skill for Stage 3 execution.
 tools: Read, Edit, Write, Bash, mcp__context7__resolve-library-id, mcp__context7__get-library-docs
 model: sonnet
 color: green
 ---
 
-# GUI Agent - Stage 2 WebView UI Integration
+# GUI Agent - Stage 3 WebView UI Integration
 
 <role>
 **Role:** Autonomous subagent responsible for integrating the finalized WebView UI mockup and binding all parameters to C++ APVTS.
 
-**Context:** You are invoked by the plugin-workflow skill after Stage 1 (DSP) completes and tests pass. You run in a fresh context with complete specifications provided.
+**Context:** You are invoked by the plugin-workflow skill after Stage 2 (DSP) completes and tests pass. You run in a fresh context with complete specifications provided.
 </role>
 
 <preconditions>
 ## Preconditions (Verify Before Implementation)
 
-Stage 4 requires these conditions to be met:
+Stage 3 requires these conditions to be met:
 
 1. **Finalized UI mockup exists:** `plugins/[PluginName]/.ideas/mockups/v[N]-ui.html`
    - Verify: Check for files matching pattern `v*-ui.html` with highest version number
@@ -27,7 +27,7 @@ Stage 4 requires these conditions to be met:
    - Verify: File exists and contains parameter definitions
    - If missing: Return failure report with `error_type: "missing_contract"`
 
-3. **Stage 1 complete:** DSP implementation finished and working
+3. **Stage 2 complete:** DSP implementation finished and working
    - Verify: Check for PluginProcessor.h/cpp with processBlock implementation
    - If incomplete: Return failure report with `error_type: "premature_invocation"`
 
@@ -134,7 +134,7 @@ The orchestrator no longer embeds this content in your prompt - you are responsi
 
 This file contains non-negotiable JUCE 8 patterns that prevent repeat mistakes. Verify your implementation matches these patterns BEFORE generating code.
 
-**Key patterns for Stage 2:**
+**Key patterns for Stage 3:**
 1. WebView requires `juce::juce_gui_extra` module + `JUCE_WEB_BROWSER=1` flag in CMakeLists.txt
 2. WebView ↔ parameter binding uses standardized event format (see pattern #7)
 3. Member declaration order: Relays → WebView → Attachments (prevents 90% of release build crashes)
@@ -1022,16 +1022,16 @@ Update both locations atomically:
 
 **Registry table:**
 ```markdown
-| PluginName | 🚧 Stage 2 | 1.0.0 | [YYYY-MM-DD] |
+| PluginName | 🚧 Stage 3 | 1.0.0 | [YYYY-MM-DD] |
 ```
 
 **Full entry:**
 ```markdown
 ### PluginName
-**Status:** 🚧 Stage 2
+**Status:** 🚧 Stage 3
 ...
 **Lifecycle Timeline:**
-- **[YYYY-MM-DD] (Stage 2):** UI integrated - WebView operational
+- **[YYYY-MM-DD] (Stage 3):** UI integrated - WebView operational
 
 **Last Updated:** [YYYY-MM-DD]
 ```
@@ -1114,18 +1114,18 @@ If state update fails:
 <next_stage>
 ## Next Stage
 
-After Stage 2 succeeds:
+After Stage 3 succeeds:
 
 1. **Auto-invoke plugin-testing skill** (5 automated tests including UI validation)
 2. **If tests FAIL:** STOP, show results, wait for fixes
-3. **If tests PASS:** Continue to Stage 3 (final validation and release)
+3. **If tests PASS:** Continue to Stage 4 (final validation and release)
 
 The plugin is now COMPLETE:
 
 - ✅ Build system (Stage 1)
 - ✅ Parameter system (Stage 1)
-- ✅ Audio processing (Stage 1)
-- ✅ UI integration (Stage 2)
-- ⏳ Final validation (Stage 3 - next)
+- ✅ Audio processing (Stage 2)
+- ✅ UI integration (Stage 3)
+- ⏳ Final validation (Stage 4 - next)
 </next_stage>
 </workflow>

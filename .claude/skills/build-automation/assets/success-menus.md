@@ -1,67 +1,54 @@
-# Success Menu Templates
+# Success Menu Definitions
 
-## Template Structure
+menus:
+  stage_2_foundation:
+    completion: "Foundation verified"
+    options:
+      - label: "Continue to Stage 3 (DSP)"
+        recommended: true
+      - label: "Review generated code"
+      - label: "Pause workflow"
 
-```
-{{COMPLETION_MESSAGE}}. What's next?
-{{#OPTIONS}}
-{{INDEX}}. {{LABEL}}{{#RECOMMENDED}} (recommended){{/RECOMMENDED}}
-{{/OPTIONS}}
-```
+  stage_3_dsp:
+    completion: "DSP implementation complete"
+    options:
+      - label: "Continue to Stage 4 (GUI)"
+        recommended: true
+      - label: "Test in DAW now"
+      - label: "Review DSP code"
+      - label: "Pause workflow"
 
-## Menu Definitions
+  stage_4_gui:
+    completion: "GUI implementation complete"
+    options:
+      - label: "Continue to Stage 5 (Validation)"
+        recommended: true
+      - label: "Test in DAW now"
+      - label: "Review GUI code"
+      - label: "Pause workflow"
 
-### Stage 1 (Foundation)
-**Completion message:** "Foundation verified"
-**Options:**
-1. Continue to Stage 2 (Shell/Parameters) [recommended]
-2. Review generated code
-3. Pause workflow
+  stage_5_validation:
+    completion: "Plugin complete and validated"
+    options:
+      - label: "Test in DAW now"
+        recommended: true
+      - label: "Review final code"
+      - label: "Package for distribution"
+      - label: "Start new plugin"
 
-### Stage 2 (Shell)
-**Completion message:** "Shell built successfully"
-**Options:**
-1. Continue to Stage 3 (DSP) [recommended]
-2. Test in DAW now
-3. Review parameter code
-4. Pause workflow
-
-### Stage 3 (DSP)
-**Completion message:** "DSP implementation complete"
-**Options:**
-1. Continue to Stage 4 (GUI) [recommended]
-2. Test in DAW now
-3. Review DSP code
-4. Pause workflow
-
-### Stage 4 (GUI)
-**Completion message:** "GUI implementation complete"
-**Options:**
-1. Continue to Stage 4 (Validation) [recommended]
-2. Test in DAW now
-3. Review GUI code
-4. Pause workflow
-
-### Stage 4 (Validation)
-**Completion message:** "Plugin complete and validated"
-**Options:**
-1. Test in DAW now [recommended]
-2. Review final code
-3. Package for distribution
-4. Start new plugin
-
-### plugin-improve
-**Completion message:** "Improvements applied successfully"
-**Options:**
-1. Test in DAW now [recommended]
-2. Review changes
-3. Apply more improvements
-4. Finalize version
+  plugin_improve:
+    completion: "Improvements applied successfully"
+    options:
+      - label: "Test in DAW now"
+        recommended: true
+      - label: "Review changes"
+      - label: "Apply more improvements"
+      - label: "Finalize version"
 
 ## Usage
 
-Load appropriate template based on invoking context:
-- Extract stage from invocation parameters
-- Select matching template
-- Substitute {{COMPLETION_MESSAGE}} and {{OPTIONS}}
-- Present to user
+Load appropriate menu based on invoking context:
+1. Extract stage number from invocation parameters (0, 2, 3, 4, 5)
+2. Map to menu key: stage_2_foundation, stage_3_dsp, stage_4_gui, stage_5_validation, plugin_improve
+3. Display completion message and options
+4. Mark recommended option if specified

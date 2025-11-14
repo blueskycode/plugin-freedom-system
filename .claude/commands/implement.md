@@ -1,13 +1,13 @@
 ---
 name: implement
-description: Build plugin through implementation stages 1-3
+description: Build plugin through implementation stages 1-4
 argument-hint: [PluginName?]
 allowed-tools: Bash(test:*)
 ---
 
 # /implement
 
-When user runs `/implement [PluginName?]`, invoke the plugin-workflow skill to build the plugin (stages 1-3 only).
+When user runs `/implement [PluginName?]`, invoke the plugin-workflow skill to build the plugin (stages 1-4 only).
 
 <prerequisite>
   Planning (Stage 0) must be completed first via `/plan` command.
@@ -240,7 +240,7 @@ Invoke the plugin-workflow skill with the plugin name and starting stage. The sk
   <skill_responsibility ref="plugin-workflow">
     The plugin-workflow skill orchestrates stages 1-4:
 
-    Stage 1 (Foundation) → Stage 1 (DSP) → Stage 2 (GUI) → Stage 3 (Validation)
+    Stage 1 (Foundation) → Stage 2 (DSP) → Stage 3 (GUI) → Stage 4 (Validation)
 
     Each stage uses specialized subagent, follows checkpoint protocol (commit, state update, decision menu).
 
