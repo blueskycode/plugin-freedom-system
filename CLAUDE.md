@@ -49,10 +49,18 @@ When these terms appear in the system, the plain-language equivalent will be sho
   - verify-backup.sh - Backup integrity verification (Phase 7)
 - **Skills**: `.claude/skills/` - Each skill follows Anthropic's pattern with `SKILL.md`, `references/`, and `assets/` subdirectories
   - plugin-workflow, plugin-ideation, plugin-improve (enhanced with regression testing), ui-mockup, context-resume, plugin-testing, plugin-lifecycle, build-automation, troubleshooting-docs, deep-research, system-setup, workflow-reconciliation
-- **Subagents**: `.claude/agents/` - research-planning-agent, foundation-shell-agent, dsp-agent, gui-agent, validation-agent, troubleshoot-agent
-- **Commands**: `.claude/commands/` - /setup, /dream, /implement, /improve, /continue, /test, /install-plugin, /uninstall, /show-standalone, /doc-fix, /research
+- **Subagents**: `.claude/agents/` - research-planning-agent, foundation-shell-agent, dsp-agent, gui-agent, validation-agent, ui-design-agent, ui-finalization-agent, troubleshoot-agent
+- **Commands**: `.claude/commands/` - /setup, /dream, /implement, /improve, /continue, /test, /install-plugin, /uninstall, /show-standalone, /doc-fix, /research, /clean, /reconcile, /clear-cache, /reset-to-ideation, /destroy, /add-critical-pattern, /package, /plan
 - **Hooks**: `.claude/hooks/` - Validation gates (PostToolUse, SubagentStop, UserPromptSubmit, Stop, PreCompact, SessionStart)
 - **Knowledge Base**: `troubleshooting/` - Dual-indexed (by-plugin + by-symptom) problem solutions
+
+### Workflow Modes
+
+- **Manual Mode** (default): Present decision menus at each checkpoint for user control
+- **Express Mode**: Auto-progress through implementation without intermediate menus
+- **Configuration**: `.claude/preferences.json` - Set workflow mode, auto-test, auto-install, auto-package options
+- **Command flags**: `--express` or `--manual` override preferences (e.g., `/implement PluginName --express`)
+- **Safety**: Express mode drops to manual on any error
 
 ## Contracts (Single Source of Truth)
 
@@ -80,7 +88,7 @@ The system prevents late-stage failures through multi-layer validation:
 
 - Validates all dependencies before any work (Python, jq, CMake, Xcode, JUCE, git)
 - Reports critical errors with actionable fix commands
-- Prevents 10+ minutes of work before discovering missing dependencies
+- Prevents wasted work before discovering missing dependencies
 
 **Stage 0→1 Transition (brief sync):**
 
@@ -163,7 +171,7 @@ Auto-progress to next stage without menu:
 **Mode options:**
 
 - **"manual"** (default): Present decision menus at all checkpoints (Stages 0, 1, 2, 3, 4)
-- **"express"**: Auto-progress through stages without menus (time savings: 3-5 minutes per plugin)
+- **"express"**: Auto-progress through stages without menus
 
 **Command-line overrides:**
 
@@ -197,12 +205,30 @@ Do NOT use AskUserQuestion tool for decision menus - use inline numbered lists a
 
 ## Subagent Invocation Protocol
 
-All implementation stages use the dispatcher pattern:
+All implementation stages use the dispatcher pattern. The system uses milestone names for user-facing messages and internal stage numbers (0-4) for routing:
 
-- Stage 0 → You **must** invoke research-planning-agent via Task tool (plugin-planning skill)
-- Stage 1 → You **must** invoke foundation-shell-agent via Task tool (plugin-workflow skill)
-- Stage 2 → You **must** invoke dsp-agent via Task tool (plugin-workflow skill)
-- Stage 3 → You **must** invoke gui-agent via Task tool (plugin-workflow skill)
+**Implementation Milestones:**
+
+- **Research Complete** (Stage 0) → research-planning-agent (plugin-planning skill)
+  - Creates architecture.md (DSP specification)
+  - Creates plan.md (implementation strategy)
+
+- **Build System Ready** (Stage 1) → foundation-shell-agent (plugin-workflow skill)
+  - Generates CMakeLists.txt, project structure
+  - Implements all APVTS parameters from parameter-spec.md
+
+- **Audio Engine Working** (Stage 2) → dsp-agent (plugin-workflow skill)
+  - Implements processBlock and DSP algorithms
+  - Connects parameters to audio processing
+
+- **UI Integrated** (Stage 3) → gui-agent (plugin-workflow skill)
+  - Creates WebView interface from mockup
+  - Binds UI controls to APVTS parameters
+
+- **Plugin Complete** (Stage 4) → validation-agent (plugin-workflow skill)
+  - Runs pluginval testing
+  - Creates factory presets
+  - Final verification
 
 The orchestrating skills delegate to subagents, they do **not** implement directly.
 
@@ -231,7 +257,6 @@ This ensures consistent checkpoint behavior and clean separation of concerns.
 
 **Benefits:**
 
-- **Time savings:** 14 minutes per plugin when custom UI isn't needed (12 min vs 26 min)
 - **Faster iteration:** Test DSP immediately after Stage 2 without waiting for UI
 - **Progressive enhancement:** Add GUI later when ready via `/improve [PluginName]`
 - **Flexibility:** User decides when/if to build custom UI

@@ -47,18 +47,16 @@ Research and design the technical architecture:
 
 Transform your specifications into a fully functional plugin through an automated workflow:
 
-- **Stage 2**: Foundation (project structure, CMake, basic scaffolding)
-- **Stage 3**: Shell (APVTS, parameter management, state)
-- **Stage 4**: DSP (audio processing algorithms)
-- **Stage 5**: GUI (WebView-based interface with parameter bindings)
-- **Stage 6**: Validation (automated testing, pluginval)
+- **Build System Ready**: Project structure, CMake configuration, and all parameters implemented
+- **Audio Engine Working**: DSP algorithms and audio processing complete
+- **UI Integrated**: WebView interface connected to audio engine (or skip for headless plugins)
+- **Plugin Complete**: Automated testing, factory presets, and final validation
 
 ### 4. Deploy & Iterate
 
 - `/install-plugin` - Install to system folders for DAW use
 - `/test` - Run automated validation suite
 - `/improve` - Add features or fix bugs (with regression testing)
-- `/sync-design` - Validate UI consistency with creative brief
 - `/reconcile` - Reconcile state between planning and implementation
 
 ## Modern Interface Design
@@ -70,6 +68,15 @@ Plugins use web-based interfaces (HTML/CSS/JS) rendered via JUCE's WebView inste
 - **Interactive mockups**: Test and refine interfaces before implementation
 - **Familiar tools**: Use web technologies many creators already understand
 - **Responsive layouts**: Easily adapt UIs to different sizes and contexts
+
+### GUI-Optional Workflow
+
+Plugins can skip custom UI and ship as "headless" plugins using DAW-provided controls:
+
+- **Faster iteration**: Test DSP immediately without waiting for UI implementation
+- **Progressive enhancement**: Add custom UI later via `/improve`
+- **Flexibility**: Decide when/if to build visual interface
+- **Zero overhead**: Smaller binary, faster compile, all parameters exposed to DAW
 
 ## Key Features
 
@@ -104,6 +111,13 @@ Dual-indexed troubleshooting database (`troubleshooting/`) captures solutions to
 - Git-based state tracking
 - Safe rollback capabilities
 - Backup verification before destructive operations
+
+### Workflow Modes
+
+- **Manual mode** (default): Present decision menus at each checkpoint for full control
+- **Express mode**: Auto-progress through implementation stages without intermediate menus
+- **Configurable**: Set preferences in `.claude/preferences.json` or use `--express`/`--manual` flags
+- **Safe**: Express mode drops to manual on any error, ensuring oversight when needed
 
 ### Lifecycle Management
 
@@ -200,8 +214,7 @@ All other dependencies (Xcode Command Line Tools, JUCE, CMake, Python, pluginval
 # 3. Build it
 /implement
 
-# Automated workflow builds the plugin (Stages 2-6)
-# Takes 5-15 minutes depending on complexity
+# Automated workflow builds the plugin
 
 # 4. Install and test
 /install-plugin YourPluginName
@@ -248,7 +261,6 @@ All other dependencies (Xcode Command Line Tools, JUCE, CMake, Python, pluginval
 ### Quality Assurance
 
 - `/test [Name]` - Run automated validation suite
-- `/sync-design [Name]` - Validate mockup ↔ brief consistency
 - `/research [topic]` - Deep investigation (3-level protocol)
 - `/doc-fix` - Document solved problems for knowledge base
 - `/add-critical-pattern` - Add current problem to Required Reading
@@ -262,6 +274,8 @@ All other dependencies (Xcode Command Line Tools, JUCE, CMake, Python, pluginval
 ### Lifecycle
 
 - `/clean` - Interactive cleanup menu (uninstall/reset/destroy)
+- `/reconcile [Name]` - Reconcile state between planning and implementation
+- `/clear-cache [Name]` - Clear validation cache
 - `/reset-to-ideation [Name]` - Remove implementation, keep idea/mockups
 - `/destroy [Name]` - Complete removal (with verified backup)
 
@@ -282,23 +296,25 @@ plugin-freedom-system/
 │       └── CMakeLists.txt
 ├── .claude/
 │   ├── skills/                       # Specialized workflows
-│   │   ├── plugin-workflow/          # Orchestrator (Stages 2-6)
-│   │   ├── plugin-planning/          # Research & design (Stages 0-1)
+│   │   ├── plugin-workflow/          # Orchestrator (Build → DSP → GUI → Validation)
+│   │   ├── plugin-planning/          # Research & design (Research Complete)
 │   │   ├── plugin-ideation/          # Concept brainstorming
 │   │   ├── plugin-improve/           # Versioned modifications
 │   │   ├── ui-mockup/                # Visual design system
 │   │   ├── plugin-testing/           # Validation suite
 │   │   ├── plugin-lifecycle/         # Install/uninstall/destroy
-│   │   ├── design-sync/              # Drift detection
 │   │   ├── deep-research/            # 3-level investigation
-│   │   └── troubleshooting-docs/     # Knowledge capture
+│   │   ├── troubleshooting-docs/     # Knowledge capture
+│   │   └── workflow-reconciliation/  # State consistency checks
 │   ├── agents/                       # Implementation subagents
-│   │   ├── foundation-agent/         # Stage 2
-│   │   ├── shell-agent/              # Stage 3
-│   │   ├── dsp-agent/                # Stage 4
-│   │   ├── gui-agent/                # Stage 5
-│   │   ├── validator/                # Stage 6
-│   │   └── troubleshooter/           # Build failures
+│   │   ├── research-planning-agent/  # Research Complete
+│   │   ├── foundation-shell-agent/   # Build System Ready
+│   │   ├── dsp-agent/                # Audio Engine Working
+│   │   ├── gui-agent/                # UI Integrated
+│   │   ├── validation-agent/         # Plugin Complete
+│   │   ├── ui-design-agent/          # UI mockup design
+│   │   ├── ui-finalization-agent/    # UI implementation scaffolding
+│   │   └── troubleshoot-agent/       # Build failures
 │   ├── commands/                     # Slash command prompts
 │   └── hooks/                        # Validation gates
 ├── scripts/
@@ -336,7 +352,7 @@ Build → Test → Find Issue → Research → Improve → Document → Validate
 - **deep-research** finds solutions (graduated 3-level protocol)
 - **plugin-improve** applies changes (with regression testing)
 - **troubleshooting-docs** captures knowledge (dual-indexed for fast lookup)
-- **design-sync** prevents drift (validates contracts)
+- **ui-mockup finalization** auto-updates brief (treats mockup as source of truth)
 - **plugin-lifecycle** manages deployment (cache clearing, verification)
 - **Required Reading** prevents repeat mistakes (auto-injected into subagents)
 
