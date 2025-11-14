@@ -119,6 +119,14 @@ void ScatterAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
     delayBuffer.prepare(spec);
     delayBuffer.reset();
 
+    // Phase 3.3: Prepare dry/wet mixer
+    dryWetMixer.prepare(spec);
+    dryWetMixer.reset();
+
+    // Phase 3.3: Allocate feedback buffer (stereo)
+    feedbackBuffer.setSize(2, samplesPerBlock);
+    feedbackBuffer.clear();
+
     // Initialize grain scheduler
     grainSpawnCounter = 0;
     lastGrainSpawnInterval = 0;
@@ -130,6 +138,8 @@ void ScatterAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock
         grain.readPosition = 0.0f;
         grain.windowPosition = 0.0f;
         grain.grainSizeSamples = 0;
+        grain.pan = 0.5f;
+        grain.reverse = false;
     }
 }
 
@@ -153,6 +163,9 @@ void ScatterAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
     auto* pitchRandomParam = parameters.getRawParameterValue("pitch_random");
     auto* scaleParam = parameters.getRawParameterValue("scale");
     auto* rootNoteParam = parameters.getRawParameterValue("root_note");
+    auto* panRandomParam = parameters.getRawParameterValue("pan_random");
+    auto* feedbackParam = parameters.getRawParameterValue("feedback");
+    auto* mixParam = parameters.getRawParameterValue("mix");
 
     float delayTimeMs = delayTimeParam->load();
     float grainSizeMs = grainSizeParam->load();
@@ -160,27 +173,62 @@ void ScatterAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
     float pitchRandomPercent = pitchRandomParam->load();
     int scaleIndex = static_cast<int>(scaleParam->load());
     int rootNote = static_cast<int>(rootNoteParam->load());
+    float panRandomPercent = panRandomParam->load();
+    float feedbackGain = feedbackParam->load() / 100.0f * 0.95f;  // Map 0-100% to 0.0-0.95
+    float mixValue = mixParam->load() / 100.0f;  // Map 0-100% to 0.0-1.0
 
     const int numSamples = buffer.getNumSamples();
+    const int numChannels = buffer.getNumChannels();
 
-    // Phase 3.1: Mono processing for testing (process channel 0 only)
-    auto* channelData = buffer.getWritePointer(0);
-
-    // Step 1: Write input to delay buffer
+    // Phase 3.3: Step 1 - Capture dry signal
     juce::dsp::AudioBlock<float> block(buffer);
-    juce::dsp::ProcessContextReplacing<float> context(block);
+    dryWetMixer.pushDrySamples(block);
 
-    for (int sample = 0; sample < numSamples; ++sample)
+    // Phase 3.3: Step 2 - Mix feedback signal with input
+    for (int channel = 0; channel < numChannels; ++channel)
     {
-        // Write current input to delay buffer
-        delayBuffer.pushSample(0, channelData[sample]);
+        auto* channelData = buffer.getWritePointer(channel);
+        auto* feedbackData = feedbackBuffer.getReadPointer(channel);
+
+        for (int sample = 0; sample < numSamples; ++sample)
+        {
+            channelData[sample] += feedbackData[sample];
+        }
     }
 
-    // Step 2: Update grain scheduler and spawn grains (Phase 3.2: Pass pitch parameters)
-    updateGrainScheduler(densityPercent, grainSizeMs, pitchRandomPercent, scaleIndex, rootNote);
+    // Phase 3.3: Step 3 - Write input + feedback to delay buffer (stereo)
+    for (int channel = 0; channel < juce::jmin(2, numChannels); ++channel)
+    {
+        auto* channelData = buffer.getReadPointer(channel);
 
-    // Step 3: Process active grain voices and write to output
+        for (int sample = 0; sample < numSamples; ++sample)
+        {
+            delayBuffer.pushSample(channel, channelData[sample]);
+        }
+    }
+
+    // Phase 3.3: Step 4 - Update grain scheduler and spawn grains
+    updateGrainScheduler(densityPercent, grainSizeMs, pitchRandomPercent, panRandomPercent, scaleIndex, rootNote);
+
+    // Phase 3.3: Step 5 - Process active grain voices (stereo output)
     processGrainVoices(buffer);
+
+    // Phase 3.3: Step 6 - Apply feedback gain and store for next cycle
+    feedbackBuffer.clear();
+    for (int channel = 0; channel < numChannels; ++channel)
+    {
+        auto* wetData = buffer.getReadPointer(channel);
+        auto* feedbackData = feedbackBuffer.getWritePointer(channel);
+
+        for (int sample = 0; sample < numSamples; ++sample)
+        {
+            feedbackData[sample] = wetData[sample] * feedbackGain;
+        }
+    }
+
+    // Phase 3.3: Step 7 - Blend with dry signal using dry/wet mixer
+    dryWetMixer.setWetMixProportion(mixValue);
+    dryWetMixer.mixWetSamples(block);
 }
 
 juce::AudioProcessorEditor* ScatterAudioProcessor::createEditor()
@@ -226,7 +274,7 @@ void ScatterAudioProcessor::generateHannWindow(int sizeInSamples)
     );
 }
 
-void ScatterAudioProcessor::spawnNewGrain(float grainSizeMs, float pitchRandomPercent, int scaleIndex, int rootNote)
+void ScatterAudioProcessor::spawnNewGrain(float grainSizeMs, float pitchRandomPercent, float panRandomPercent, int scaleIndex, int rootNote)
 {
     // Convert grain size from ms to samples
     int grainSizeSamples = static_cast<int>(currentSampleRate * grainSizeMs / 1000.0f);
@@ -252,26 +300,32 @@ void ScatterAudioProcessor::spawnNewGrain(float grainSizeMs, float pitchRandomPe
         availableVoice = &grainVoices[0];
     }
 
-    // Phase 3.2: Generate random pitch and quantize to scale
+    // Get random number generator
     auto& random = juce::Random::getSystemRandom();
 
-    // Generate random pitch: -7 to +7 semitones, scaled by pitch_random parameter
+    // Phase 3.2: Generate random pitch and quantize to scale
     float randomPitch = (random.nextFloat() * 2.0f - 1.0f) * 7.0f * (pitchRandomPercent / 100.0f);
-
-    // Quantize to selected scale with root note transposition
     int quantizedPitch = quantizePitchToScale(randomPitch, scaleIndex, rootNote);
-
-    // Calculate playback rate: rate = 2^(semitones / 12)
     float playbackRate = std::pow(2.0f, quantizedPitch / 12.0f);
+
+    // Phase 3.3: Generate random pan position (0.0 = left, 1.0 = right)
+    float basePan = 0.5f;  // Center
+    float randomPan = random.nextFloat();  // 0.0-1.0
+    float panAmount = (randomPan - 0.5f) * (panRandomPercent / 100.0f);  // Scaled by parameter
+    float pan = juce::jlimit(0.0f, 1.0f, basePan + panAmount);
+
+    // Phase 3.3: Random reverse playback (50/50 probability)
+    bool reverse = random.nextBool();
 
     // Initialize grain voice
     availableVoice->active = true;
     availableVoice->grainSizeSamples = grainSizeSamples;
     availableVoice->windowPosition = 0.0f;
-    availableVoice->playbackRate = playbackRate;  // Phase 3.2: Store playback rate
+    availableVoice->playbackRate = playbackRate;
+    availableVoice->pan = pan;
+    availableVoice->reverse = reverse;
 
     // Read position: Start at current delay buffer write position
-    // Phase 3.1: No delay time offset (read from current position)
     availableVoice->readPosition = 0.0f;
 
     // Generate Hann window for this grain size (if not already cached)
@@ -281,7 +335,7 @@ void ScatterAudioProcessor::spawnNewGrain(float grainSizeMs, float pitchRandomPe
     }
 }
 
-void ScatterAudioProcessor::updateGrainScheduler(float densityPercent, float grainSizeMs, float pitchRandomPercent, int scaleIndex, int rootNote)
+void ScatterAudioProcessor::updateGrainScheduler(float densityPercent, float grainSizeMs, float pitchRandomPercent, float panRandomPercent, int scaleIndex, int rootNote)
 {
     // Grain spawn interval calculation: grainSizeSamples / (density * overlapFactor)
     // At 50% density, grains spawn at ~grainSize intervals (moderate overlap)
@@ -304,7 +358,7 @@ void ScatterAudioProcessor::updateGrainScheduler(float densityPercent, float gra
     // Check if it's time to spawn a new grain
     if (grainSpawnCounter >= spawnInterval)
     {
-        spawnNewGrain(grainSizeMs, pitchRandomPercent, scaleIndex, rootNote);
+        spawnNewGrain(grainSizeMs, pitchRandomPercent, panRandomPercent, scaleIndex, rootNote);
         grainSpawnCounter = 0;  // Reset counter
     }
 }
@@ -312,8 +366,9 @@ void ScatterAudioProcessor::updateGrainScheduler(float densityPercent, float gra
 void ScatterAudioProcessor::processGrainVoices(juce::AudioBuffer<float>& buffer)
 {
     const int numSamples = buffer.getNumSamples();
+    const int numChannels = buffer.getNumChannels();
 
-    // Phase 3.1: Clear output buffer (grains will be summed into it)
+    // Clear output buffer (grains will be summed into it)
     buffer.clear();
 
     // Process each active grain voice
@@ -343,29 +398,57 @@ void ScatterAudioProcessor::processGrainVoices(juce::AudioBuffer<float>& buffer)
                 windowValue = hannWindow[windowIndex];
             }
 
-            // Read from delay buffer (interpolated)
-            // Phase 3.1: Read at grain's read position (no delay offset yet)
+            // Phase 3.3: Read from delay buffer (stereo, with channel selection)
+            // Use channel 0 for mono-like grain source (could randomize per grain in future)
             float delaySamples = grain.readPosition;
             float delayedSample = delayBuffer.popSample(0, delaySamples);
 
             // Apply window envelope
             float grainOutput = delayedSample * windowValue;
 
-            // Sum to output buffer (mono for Phase 3.1)
-            auto* outputData = buffer.getWritePointer(0);
-            outputData[sample] += grainOutput;
+            // Phase 3.3: Apply stereo panning
+            float leftGain = 1.0f - grain.pan;   // pan=0.0 → leftGain=1.0, pan=1.0 → leftGain=0.0
+            float rightGain = grain.pan;          // pan=0.0 → rightGain=0.0, pan=1.0 → rightGain=1.0
+
+            // Sum to output buffer (stereo)
+            if (numChannels >= 2)
+            {
+                auto* leftData = buffer.getWritePointer(0);
+                auto* rightData = buffer.getWritePointer(1);
+
+                leftData[sample] += grainOutput * leftGain;
+                rightData[sample] += grainOutput * rightGain;
+            }
+            else if (numChannels == 1)
+            {
+                // Mono output: mix both channels
+                auto* outputData = buffer.getWritePointer(0);
+                outputData[sample] += grainOutput;
+            }
 
             // Advance grain window position (always at rate 1.0 - envelope progresses normally)
             grain.windowPosition += 1.0f / grain.grainSizeSamples;
 
-            // Phase 3.2: Advance read position by playback rate (pitch shift)
-            // Forward playback only (Phase 3.3 will add reverse)
-            grain.readPosition += grain.playbackRate;
-
-            // Wrap read position if it exceeds delay buffer size
-            if (grain.readPosition >= currentDelayBufferSize)
+            // Phase 3.3: Advance read position by playback rate (forward or reverse)
+            if (grain.reverse)
             {
-                grain.readPosition = 0.0f;
+                grain.readPosition -= grain.playbackRate;
+
+                // Wrap around if negative
+                if (grain.readPosition < 0.0f)
+                {
+                    grain.readPosition += currentDelayBufferSize;
+                }
+            }
+            else
+            {
+                grain.readPosition += grain.playbackRate;
+
+                // Wrap around if exceeds buffer size
+                if (grain.readPosition >= currentDelayBufferSize)
+                {
+                    grain.readPosition -= currentDelayBufferSize;
+                }
             }
         }
     }

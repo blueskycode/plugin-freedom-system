@@ -45,10 +45,10 @@ private:
         float readPosition = 0.0f;      // Position in delay buffer (fractional samples)
         float windowPosition = 0.0f;    // Position in window envelope (0.0-1.0)
         int grainSizeSamples = 0;       // Duration of this grain in samples
-        float playbackRate = 1.0f;      // Phase 3.2: Playback speed (pitch shift)
+        float playbackRate = 1.0f;      // Playback speed (pitch shift)
+        float pan = 0.5f;               // Phase 3.3: Pan position (0.0 = left, 1.0 = right)
+        bool reverse = false;           // Phase 3.3: Reverse playback flag
         bool active = false;            // Is this voice currently playing?
-
-        // Phase 3.3: Will add pan position and reverse flag
     };
 
     // DSP components (declare BEFORE parameters for initialization order)
@@ -77,9 +77,13 @@ private:
     static constexpr int numScales = 5;
     std::array<std::vector<int>, numScales> scaleIntervals;
 
+    // Phase 3.3: Spatial + Reverse + Feedback components
+    juce::dsp::DryWetMixer<float> dryWetMixer;
+    juce::AudioBuffer<float> feedbackBuffer;
+
     // Helper methods
-    void spawnNewGrain(float grainSizeMs, float pitchRandomPercent, int scaleIndex, int rootNote);
-    void updateGrainScheduler(float densityPercent, float grainSizeMs, float pitchRandomPercent, int scaleIndex, int rootNote);
+    void spawnNewGrain(float grainSizeMs, float pitchRandomPercent, float panRandomPercent, int scaleIndex, int rootNote);
+    void updateGrainScheduler(float densityPercent, float grainSizeMs, float pitchRandomPercent, float panRandomPercent, int scaleIndex, int rootNote);
     void processGrainVoices(juce::AudioBuffer<float>& buffer);
     void generateHannWindow(int sizeInSamples);
     void initializeScaleTables();
